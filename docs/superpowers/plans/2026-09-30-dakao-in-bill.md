@@ -16,17 +16,17 @@
 - Integer VND, immutable saved order/item/receipt snapshots, UNPAID creation, commit before print.
 - Retry/reprint act on order IDs and cannot create orders or affect revenue.
 - Reproduce approved Stitch reference; do not redesign absent screens.
-- Candidate stack requires Flutter ≥3.44 and Dart ≥3.12; versions remain provisional until build gates pass.
+- Stage 0 selected Flutter 3.47.5 / Dart 3.13.4 with Android minSdk 24; resolved package versions are pinned in pubspec.yaml and pubspec.lock.
 - Stage commits should be small and reviewed. No remote, push or server deployment is required.
 
 ## Stage 0 — Review and establish the build baseline
 
-- [ ] Review spec rules 1–5, schema additions and Android phone support. Obtain Stitch export/link/assets and target phone Android version. Resolve these before dependent code.
-- [ ] Locate or install stable Flutter and Android SDK/Studio; record actual SDK/JDK/AGP/Gradle combination. Run `flutter --version`, `dart --version`, `flutter doctor -v`, `flutter devices`, `adb devices`. Accept Android licenses through the normal setup flow.
-- [ ] Initialize Git after review, record approved documents in the initial commit, and create `feature/full-pos`. No premature hardware-success label.
-- [ ] Scaffold Android-only Flutter project as `dakao_in_bill`, display name Đakao In Bill; select the permanent Android application ID with the owner before release signing.
-- [ ] Review candidate package source, license and open blocking issues; resolve dependencies and commit `pubspec.lock`. Audit printer I/O for UI-thread blocking, raw bytes and timeouts. Choose conditional ESC/POS package only with explicit maintenance decision; otherwise implement the narrow owned encoder within Stage 4.
-- [ ] Create `lib/app/app.dart`, `lib/app/router.dart`, `lib/app/theme.dart`, `lib/main.dart`; wire the five approved destinations and dependency injection. Keep production printer binding real; test fakes only in tests.
+- [x] Record approved spec rules 1–5 and schema additions. Bootstrap targets minSdk 24. Stitch reference and actual shop phone remain deferred inputs before dependent UI/device acceptance work; they do not block a neutral shell.
+- [x] Locate or install stable Flutter and Android SDK/Studio; record actual SDK/JDK/AGP/Gradle combination. Run `flutter --version`, `dart --version`, `flutter doctor -v`, `flutter devices`, `adb devices`. Accept Android licenses through the normal setup flow.
+- [x] Initialize Git after review, record approved documents in the initial commit, and create `feature/full-pos`. No premature hardware-success label.
+- [x] Scaffold Android-only Flutter project as `dakao_in_bill`, display name Đakao In Bill; select the permanent Android application ID with the owner before release signing.
+- [x] Review candidate package source, license and open blocking issues; resolve dependencies and commit `pubspec.lock`. Audit printer I/O for UI-thread blocking, raw bytes and timeouts. Choose conditional ESC/POS package only with explicit maintenance decision; otherwise implement the narrow owned encoder within Stage 4.
+- [x] Create `lib/app/app.dart`, `lib/app/router.dart`, `lib/app/theme.dart`, `lib/main.dart`; wire the five approved destinations and dependency injection. Printer binding begins in Stage 4 using the selected native fallback; no fake production transport exists in this scaffold.
 
 Gate: `flutter pub get`, `flutter analyze`, scaffold `flutter test`, `flutter build apk --debug` succeed; launch on emulator/phone. Record versions and limitations in `docs/verification/environment.md`. No product acceptance follows from scaffold tests.
 
@@ -85,7 +85,7 @@ Gate: `flutter test test/printing test/orders`, `flutter analyze`, `flutter buil
 
 Files: `lib/features/revenue/{revenue_repository,revenue_screen,revenue_chart}.dart`; `test/revenue/`.
 
-Interface: `Future<RevenueSummary> summarize(DateTime startUtc, DateTime endUtc)` uses half-open ranges derived from Vietnam days. Summary contains paidRevenue, createdOrderCount, unpaidAmount, bestSellers and dailyPaidRevenue. Apply reviewed definitions consistently.
+Interface: `Future<RevenueSummary> summarize(DateTime startUtc, DateTime endUtc)` uses half-open ranges derived from Vietnam days. Summary contains paidRevenue, createdOrderCount, unpaidAmount, bestSellers and dailyPaidRevenue. unpaidAmount always sums all current UNPAID orders regardless of the selected period; paidRevenue uses paid_at. Apply approved definitions consistently.
 
 - [ ] Write fixtures spanning midnight/month boundaries, created-yesterday/paid-today, cancelled paid orders, unpaid orders and repeated print attempts.
 - [ ] Implement today, seven calendar days and current month queries; aggregate persisted integer data, not transient cart state. Avoid multiplying totals by joining orders to multiple items.
@@ -136,5 +136,4 @@ Gate: all required cases have physical evidence; unsupported protocol or Vietnam
 
 ## Handoff
 
-Current deliverable is documentation only. Toolchain checks are observations; all build/test/hardware gates above remain unexecuted. Review both documents and the explicitly proposed rules before production work. Native execution is the small-project default recommendation; choose another execution approach if desired during review.
-
+Native execution was selected and Stage 0 only was authorized. Toolchain installation, Git initialization, dependency resolution and the navigation scaffold are implemented; pub get, static analysis and the scaffold smoke test pass. Debug APK build and Android API 36 emulator launch also pass. Stage 0 is complete; authoritative results, the verified local engine mirror workaround, and remaining limitations are in docs/verification/environment.md. Stage 1 has not started. All later-stage business, migration, backup and printer hardware gates remain unexecuted.
