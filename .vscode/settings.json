@@ -1,0 +1,9 @@
+{
+  "dart.flutterSdkPath": "C:\\Users\\ACER\\develop\\flutter",
+  "terminal.integrated.env.windows": {
+    "ANDROID_HOME": "C:\\Users\\ACER\\AppData\\Local\\Android\\Sdk",
+    "ANDROID_SDK_ROOT": "C:\\Users\\ACER\\AppData\\Local\\Android\\Sdk",
+    "JAVA_HOME": "C:\\Program Files\\Java\\jdk-21.0.11",
+    "PATH": "C:\\Users\\ACER\\develop\\flutter\\bin;C:\\Users\\ACER\\AppData\\Local\\Android\\Sdk\\platform-tools;C:\\Users\\ACER\\AppData\\Local\\Android\\Sdk\\emulator;C:\\Users\\ACER\\AppData\\Local\\Android\\Sdk\\cmdline-tools\\latest\\bin;C:\\Program Files\\Java\\jdk-21.0.11\\bin;${env:PATH}"
+  }
+}
