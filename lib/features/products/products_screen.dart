@@ -1,0 +1,461 @@
+import 'dart:async';
+import 'dart:io';
+
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+
+import '../../app/theme.dart';
+import '../../core/money.dart';
+import 'catalog_controller.dart';
+import 'product_repository.dart';
+
+class ProductsScreen extends ConsumerStatefulWidget {
+  const ProductsScreen({super.key});
+
+  @override
+  ConsumerState<ProductsScreen> createState() => _ProductsScreenState();
+}
+
+class _ProductsScreenState extends ConsumerState<ProductsScreen> {
+  Timer? _searchDebounce;
+
+  @override
+  void dispose() {
+    _searchDebounce?.cancel();
+    super.dispose();
+  }
+
+  void _search(String value) {
+    _searchDebounce?.cancel();
+    _searchDebounce = Timer(const Duration(milliseconds: 250), () {
+      ref.read(catalogControllerProvider.notifier).setSearch(value);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final catalog = ref.watch(catalogControllerProvider);
+    return catalog.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (error, stack) => _CatalogError(
+        onRetry: ref.read(catalogControllerProvider.notifier).refresh,
+      ),
+      data: (state) => Column(
+        children: [
+          Expanded(
+            child: RefreshIndicator(
+              onRefresh: ref.read(catalogControllerProvider.notifier).refresh,
+              child: CustomScrollView(
+                key: const Key('catalog-scroll'),
+                slivers: [
+                  SliverPadding(
+                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+                    sliver: SliverList.list(
+                      children: [
+                        _CatalogHeader(count: state.products.length),
+                        const SizedBox(height: 16),
+                        TextField(
+                          key: const Key('catalog-search'),
+                          onChanged: _search,
+                          textInputAction: TextInputAction.search,
+                          decoration: const InputDecoration(
+                            hintText: 'Tìm tên món…',
+                            prefixIcon: Icon(Icons.search_rounded),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        _CategoryFilters(state: state),
+                        const SizedBox(height: 12),
+                      ],
+                    ),
+                  ),
+                  if (state.products.isEmpty)
+                    const SliverFillRemaining(
+                      hasScrollBody: false,
+                      child: _EmptyCatalog(),
+                    )
+                  else
+                    SliverPadding(
+                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                      sliver: SliverList.separated(
+                        itemCount: state.products.length,
+                        separatorBuilder: (context, index) =>
+                            const SizedBox(height: 12),
+                        itemBuilder: (context, index) =>
+                            _ProductCard(product: state.products[index]),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
+          _AddProductAction(onPressed: () => context.push('/products/add')),
+        ],
+      ),
+    );
+  }
+}
+
+class _CatalogHeader extends StatelessWidget {
+  const _CatalogHeader({required this.count});
+
+  final int count;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          child: Wrap(
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: 8,
+            children: [
+              Text(
+                'Quản lý món',
+                style: Theme.of(context).textTheme.headlineSmall
+                    ?.copyWith(fontWeight: FontWeight.w800),
+              ),
+              DecoratedBox(
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFDBCE),
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 5,
+                  ),
+                  child: Text(
+                    '$count món',
+                    style: const TextStyle(
+                      color: AppColors.primary,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(width: 8),
+        FilledButton.tonalIcon(
+          key: const Key('manage-categories'),
+          onPressed: () async {
+            await context.push('/products/categories');
+            if (context.mounted) {
+              await ProviderScope.containerOf(context)
+                  .read(catalogControllerProvider.notifier)
+                  .refresh();
+            }
+          },
+          icon: const Icon(Icons.category_outlined, size: 20),
+          label: const Text('Danh mục'),
+          style: FilledButton.styleFrom(
+            minimumSize: const Size(48, 48),
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            backgroundColor: AppColors.surfaceHigh,
+            foregroundColor: AppColors.ink,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _CategoryFilters extends ConsumerWidget {
+  const _CategoryFilters({required this.state});
+
+  final CatalogState state;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final categories = state.categories.where((item) => item.isActive);
+    return SizedBox(
+      height: 44,
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        children: [
+          _FilterChip(
+            label: 'Tất cả',
+            selected: state.categoryId == null,
+            onSelected: () =>
+                ref.read(catalogControllerProvider.notifier).setCategory(null),
+          ),
+          for (final category in categories) ...[
+            const SizedBox(width: 8),
+            _FilterChip(
+              label: category.name,
+              selected: state.categoryId == category.id,
+              onSelected: () => ref
+                  .read(catalogControllerProvider.notifier)
+                  .setCategory(category.id),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _FilterChip extends StatelessWidget {
+  const _FilterChip({
+    required this.label,
+    required this.selected,
+    required this.onSelected,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    return ChoiceChip(
+      label: Text(label),
+      selected: selected,
+      onSelected: (_) => onSelected(),
+      showCheckmark: false,
+      labelStyle: TextStyle(
+        color: selected ? Colors.white : AppColors.secondaryInk,
+        fontWeight: FontWeight.w700,
+      ),
+      selectedColor: AppColors.ink,
+      backgroundColor: AppColors.surfaceHigh,
+      side: BorderSide.none,
+      shape: const StadiumBorder(),
+      padding: const EdgeInsets.symmetric(horizontal: 8),
+    );
+  }
+}
+
+class _ProductCard extends ConsumerWidget {
+  const _ProductCard({required this.product});
+
+  final CatalogProduct product;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final imageStore = ref.watch(productImageStoreProvider).value;
+    final image = product.imagePath == null || imageStore == null
+        ? null
+        : imageStore.resolve(product.imagePath!);
+    final unavailable = !product.isAvailable;
+    return Card(
+      key: Key('product-${product.id}'),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: () async {
+          final controller = ref.read(catalogControllerProvider.notifier);
+          final messenger = ScaffoldMessenger.of(context);
+          final deleted = await context.push<bool>(
+            '/products/${product.id}/edit',
+          );
+          if (deleted == true) {
+            messenger.showSnackBar(
+              SnackBar(
+                content: const Text('Đã ẩn món khỏi danh mục.'),
+                action: SnackBarAction(
+                  label: 'Hoàn tác',
+                  onPressed: () => controller.restoreProduct(product.id),
+                ),
+              ),
+            );
+          }
+        },
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Row(
+            children: [
+              _ProductImage(file: image, unavailable: unavailable),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Opacity(
+                  opacity: unavailable ? 0.62 : 1,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              product.name,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 17,
+                                fontWeight: FontWeight.w800,
+                                decoration: unavailable
+                                    ? TextDecoration.lineThrough
+                                    : null,
+                              ),
+                            ),
+                          ),
+                          const Icon(
+                            Icons.edit_outlined,
+                            size: 19,
+                            color: Color(0xFF9B7D72),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        product.categoryName,
+                        style: const TextStyle(
+                          color: AppColors.secondaryInk,
+                          fontSize: 13,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        formatVnd(product.price),
+                        style: const TextStyle(
+                          color: AppColors.primary,
+                          fontSize: 17,
+                          fontWeight: FontWeight.w800,
+                          fontFeatures: [FontFeature.tabularFigures()],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              SizedBox(
+                width: 70,
+                child: Column(
+                  children: [
+                    Switch(
+                      key: Key('availability-${product.id}'),
+                      value: product.isAvailable,
+                      activeTrackColor: AppColors.success,
+                      onChanged: (value) => ref
+                          .read(catalogControllerProvider.notifier)
+                          .setAvailability(product.id, value),
+                    ),
+                    Text(
+                      unavailable ? 'Hết món' : 'Đang bán',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: unavailable
+                            ? AppColors.secondaryInk
+                            : AppColors.success,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ProductImage extends StatelessWidget {
+  const _ProductImage({required this.file, required this.unavailable});
+
+  final File? file;
+  final bool unavailable;
+
+  @override
+  Widget build(BuildContext context) {
+    final validFile = file != null && file!.existsSync();
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(12),
+      child: SizedBox(
+        width: 76,
+        height: 76,
+        child: ColorFiltered(
+          colorFilter: unavailable
+              ? const ColorFilter.mode(Colors.grey, BlendMode.saturation)
+              : const ColorFilter.mode(Colors.transparent, BlendMode.multiply),
+          child: validFile
+              ? Image.file(file!, fit: BoxFit.cover)
+              : const ColoredBox(
+                  color: Color(0xFFE1E8FD),
+                  child: Icon(
+                    Icons.restaurant_rounded,
+                    color: AppColors.primary,
+                    size: 32,
+                  ),
+                ),
+        ),
+      ),
+    );
+  }
+}
+
+class _AddProductAction extends StatelessWidget {
+  const _AddProductAction({required this.onPressed});
+
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: const BoxDecoration(
+        color: AppColors.canvas,
+        boxShadow: [
+          BoxShadow(
+            color: Color(0x12000000),
+            blurRadius: 16,
+            offset: Offset(0, -4),
+          ),
+        ],
+      ),
+      child: SafeArea(
+        top: false,
+        minimum: const EdgeInsets.fromLTRB(16, 10, 16, 10),
+        child: SizedBox(
+          width: double.infinity,
+          child: FilledButton.icon(
+            key: const Key('add-product'),
+            onPressed: onPressed,
+            icon: const Icon(Icons.add_circle_outline),
+            label: const Text('Thêm món mới'),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _EmptyCatalog extends StatelessWidget {
+  const _EmptyCatalog();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Center(
+      child: Padding(
+        padding: EdgeInsets.all(32),
+        child: Text(
+          'Chưa có món phù hợp.',
+          textAlign: TextAlign.center,
+          style: TextStyle(color: AppColors.secondaryInk),
+        ),
+      ),
+    );
+  }
+}
+
+class _CatalogError extends StatelessWidget {
+  const _CatalogError({required this.onRetry});
+
+  final Future<void> Function() onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: FilledButton.tonalIcon(
+        onPressed: onRetry,
+        icon: const Icon(Icons.refresh),
+        label: const Text('Thử lại'),
+      ),
+    );
+  }
+}

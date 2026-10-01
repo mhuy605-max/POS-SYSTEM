@@ -2,6 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../features/products/category_management_screen.dart';
+import '../features/products/product_form_screen.dart';
+import '../features/products/products_screen.dart';
+
 const _destinations = [
   (path: '/sales', label: 'Bán hàng', icon: Icons.point_of_sale_outlined),
   (path: '/orders', label: 'Đơn hàng', icon: Icons.receipt_long_outlined),
@@ -20,7 +24,28 @@ final routerProvider = Provider<GoRouter>((ref) {
             (destination) => destination.path == state.uri.path,
           );
           return Scaffold(
-            appBar: AppBar(title: const Text('Đakao In Bill')),
+            appBar: AppBar(
+              title: Row(
+                children: [
+                  DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFFE9E0),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const SizedBox.square(
+                      dimension: 44,
+                      child: Icon(Icons.receipt_long_outlined, size: 24),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Text(
+                    selectedIndex < 0
+                        ? 'Đakao In Bill'
+                        : _destinations[selectedIndex].label,
+                  ),
+                ],
+              ),
+            ),
             body: child,
             bottomNavigationBar: NavigationBar(
               selectedIndex: selectedIndex < 0 ? 0 : selectedIndex,
@@ -43,16 +68,31 @@ final routerProvider = Provider<GoRouter>((ref) {
               path: destination.path,
               pageBuilder: (context, state) => NoTransitionPage<void>(
                 key: state.pageKey,
-                // Stage 0 route targets only, not prototype screen designs.
-                child: Center(
-                  child: Text(
-                    destination.label,
-                    key: const Key('destination-title'),
-                  ),
-                ),
+                child: destination.path == '/products'
+                    ? const ProductsScreen()
+                    : Center(
+                        child: Text(
+                          destination.label,
+                          key: const Key('destination-title'),
+                        ),
+                      ),
               ),
             ),
         ],
+      ),
+      GoRoute(
+        path: '/products/add',
+        builder: (context, state) => const ProductFormScreen(),
+      ),
+      GoRoute(
+        path: '/products/:id/edit',
+        builder: (context, state) => ProductFormScreen(
+          productId: int.parse(state.pathParameters['id']!),
+        ),
+      ),
+      GoRoute(
+        path: '/products/categories',
+        builder: (context, state) => const CategoryManagementScreen(),
       ),
     ],
   );
