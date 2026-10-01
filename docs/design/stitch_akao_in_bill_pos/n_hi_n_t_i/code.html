@@ -1,0 +1,222 @@
+<!DOCTYPE html><html lang="vi"><head><meta charset="utf-8"><meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" name="viewport"><meta content="mobile_stack" name="shell-type"><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"><link href="https://fonts.googleapis.com" rel="preconnect"><link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"><link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"><style>@layer base{html,body{width:100vw;margin:0;padding:0;}body{overscroll-behavior:none;}.pb-safe{padding-bottom:env(safe-area-inset-bottom,0px);}.pt-safe{padding-top:env(safe-area-inset-top,0px);}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config = { darkMode: "class", theme: { extend: { "colors": { "surface-container": "#e9edff", "error": "#ba1a1a", "outline": "#8e7166", "on-secondary-fixed-variant": "#005320", "on-tertiary-fixed": "#2f1500", "on-error-container": "#93000a", "on-primary-container": "#fffbff", "on-secondary-fixed": "#002109", "on-secondary": "#ffffff", "surface": "#f9f9ff", "tertiary-fixed": "#ffdcc3", "on-tertiary": "#ffffff", "on-primary": "#ffffff", "inverse-primary": "#ffb599", "on-tertiary-fixed-variant": "#6e3900", "on-error": "#ffffff", "inverse-surface": "#293040", "surface-variant": "#dce2f7", "error-container": "#ffdad6", "surface-container-lowest": "#ffffff", "primary-container": "#cc4900", "inverse-on-surface": "#edf0ff", "secondary": "#006e2d", "secondary-fixed": "#7ffc97", "on-primary-fixed": "#370e00", "tertiary-container": "#b15f00", "outline-variant": "#e2bfb2", "secondary-fixed-dim": "#62df7d", "on-primary-fixed-variant": "#7f2b00", "primary-fixed-dim": "#ffb599", "surface-container-high": "#e1e8fd", "primary-fixed": "#ffdbce", "on-secondary-container": "#007230", "background": "#f9f9ff", "surface-dim": "#d3daef", "tertiary-fixed-dim": "#ffb77d", "tertiary": "#8d4b00", "surface-container-low": "#f1f3ff", "secondary-container": "#7cf994", "on-background": "#141b2b", "surface-bright": "#f9f9ff", "surface-container-highest": "#dce2f7", "surface-tint": "#a73a00", "on-tertiary-container": "#fffbff", "on-surface": "#141b2b", "on-surface-variant": "#5a4138", "primary": "#a33900" }, "borderRadius": { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" }, "spacing": { "margin": "1rem", "space-xs": "0.25rem", "space-lg": "1rem", "space-md": "0.75rem", "gutter": "0.75rem", "space-xl": "1.5rem", "space-sm": "0.5rem" }, "fontFamily": { "price-display": ["Plus Jakarta Sans"], "body-sm": ["Plus Jakarta Sans"], "body-lg": ["Plus Jakarta Sans"], "headline-sm": ["Plus Jakarta Sans"], "label-sm": ["Plus Jakarta Sans"], "label-lg": ["Plus Jakarta Sans"], "headline-md": ["Plus Jakarta Sans"], "headline-lg": ["Plus Jakarta Sans"], "body-md": ["Plus Jakarta Sans"], "label-md": ["Plus Jakarta Sans"], "price-receipt": ["Plus Jakarta Sans"] }, "fontSize": { "price-display": ["24px", {"lineHeight": "30px", "letterSpacing": "-0.03em", "fontWeight": "800"}], "body-sm": ["12px", {"lineHeight": "16px", "fontWeight": "500"}], "body-lg": ["16px", {"lineHeight": "22px", "fontWeight": "600"}], "headline-sm": ["18px", {"lineHeight": "24px", "fontWeight": "700"}], "label-sm": ["11px", {"lineHeight": "14px", "letterSpacing": "0.04em", "fontWeight": "700"}], "label-lg": ["15px", {"lineHeight": "20px", "letterSpacing": "0.01em", "fontWeight": "700"}], "headline-md": ["22px", {"lineHeight": "28px", "letterSpacing": "-0.015em", "fontWeight": "700"}], "headline-lg": ["30px", {"lineHeight": "38px", "letterSpacing": "-0.02em", "fontWeight": "800"}], "body-md": ["14px", {"lineHeight": "20px", "fontWeight": "500"}], "label-md": ["13px", {"lineHeight": "18px", "fontWeight": "600"}], "price-receipt": ["15px", {"lineHeight": "20px", "letterSpacing": "-0.01em", "fontWeight": "700"}] } } } };</script></head><body class="bg-surface font-body-md text-on-surface flex flex-col min-h-screen"><header class="fixed top-0 w-full z-50 bg-surface/90 backdrop-blur-xl shadow-[0_1px_8px_rgba(0,0,0,0.04)] pt-safe"><div class="h-14 px-margin flex items-center justify-between"><div class="flex items-center gap-space-sm"><button class="w-11 h-11 flex items-center justify-center text-on-surface rounded-full active:bg-surface-variant/40" onclick="history.back()"><span class="material-symbols-outlined text-[24px]">arrow_back</span></button><h1 class="font-headline-sm text-headline-sm tracking-tight text-on-surface">Đơn Hiện Tại</h1></div></div></header><main class="flex flex-col relative w-full pt-14 pb-safe bg-surface min-h-screen"><div class="flex flex-col w-full pb-28">
+<!-- Top Meta Strip: Order Type & Hardware Live Status -->
+<div class="px-margin pt-space-xs pb-space-sm bg-surface-container-low flex items-center justify-between">
+<div class="flex items-center gap-space-xs">
+<span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Mã đơn:</span>
+<span class="font-label-md text-label-md text-primary font-bold">#0124</span>
+<span class="inline-flex items-center px-1.5 py-0.5 rounded-full bg-secondary-container text-on-secondary-container font-label-sm text-[10px]">Tạo mới</span>
+</div>
+<!-- Bluetooth Hardware Ready Indicator -->
+<div class="flex items-center gap-1.5 px-2 py-1 rounded-full bg-surface-container text-secondary">
+<span class="inline-block w-2 h-2 rounded-full bg-secondary animate-pulse"></span>
+<span class="font-label-sm text-[11px] font-bold tracking-tight">Máy in 58mm: Sẵn sàng</span>
+<span class="material-symbols-outlined text-[14px]">bluetooth_connected</span>
+</div>
+</div>
+<!-- Dining Option Selector (Tactile Toggle Chips) -->
+<div class="px-margin py-space-sm flex gap-space-sm bg-surface"><button class="flex-1 py-2 px-3 rounded-xl bg-surface-container text-on-surface-variant font-label-lg text-label-lg flex items-center justify-center gap-1.5 active:scale-95 transition-all" type="button"><span class="material-symbols-outlined text-[18px]">storefront</span><span class="">Tại quán</span></button><button class="flex-1 py-2 px-3 rounded-xl bg-on-surface text-surface-container-lowest font-label-lg text-label-lg flex items-center justify-center gap-1.5 shadow-sm active:scale-95 transition-all" type="button"><span class="material-symbols-outlined text-[18px]">takeout_dining</span><span class="">Mang về</span><span class="w-1.5 h-1.5 rounded-full bg-primary-fixed-dim ml-0.5"></span></button></div>
+<!-- Order Items Container (Dense Tactile List for High Speed) -->
+<div class="px-margin flex flex-col gap-space-sm mt-space-xs">
+<!-- Item 1: Cơm sườn -->
+<div class="bg-surface-container-lowest rounded-xl p-space-md shadow-sm flex flex-col gap-space-xs transition-transform active:scale-[0.99]">
+<div class="flex items-start justify-between gap-space-sm">
+<div class="flex-1 min-w-0">
+<div class="flex items-center gap-1.5">
+<h3 class="font-body-lg text-body-lg text-on-surface truncate">Cơm sườn nướng</h3>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant">45.000đ / dĩa</p>
+</div>
+<div class="text-right">
+<span class="font-price-receipt text-price-receipt text-on-surface" id="subtotal-1">90.000đ</span>
+</div>
+</div>
+<div class="flex items-center justify-between pt-1">
+<!-- Note chip with tactile pen icon -->
+<div class="flex items-center gap-1 bg-surface-container-low px-2 py-1 rounded-lg text-on-surface-variant max-w-[60%]">
+<span class="material-symbols-outlined text-[14px] text-tertiary">edit_note</span>
+<span class="font-body-sm text-[12px] truncate text-tertiary font-medium">Ít mỡ hành, nước mắm ngọt</span>
+</div>
+<!-- Tactile High-Speed Stepper (44px target) -->
+<div class="flex items-center gap-space-xs bg-surface-container-low p-1 rounded-xl">
+<button class="w-9 h-9 rounded-lg bg-surface-container-lowest text-on-surface flex items-center justify-center font-bold active:bg-surface-variant shadow-sm active:scale-90 transition-transform" onclick="decrement(1, 45000)" type="button">
+<span class="material-symbols-outlined text-[18px]">remove</span>
+</button>
+<span class="w-7 text-center font-headline-sm text-headline-sm text-on-surface font-extrabold" id="qty-1">2</span>
+<button class="w-9 h-9 rounded-lg bg-surface-container-lowest text-on-surface flex items-center justify-center font-bold active:bg-surface-variant shadow-sm active:scale-90 transition-transform" onclick="increment(1, 45000)" type="button">
+<span class="material-symbols-outlined text-[18px]">add</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Item 2: Cơm sườn bì chả -->
+<div class="bg-surface-container-lowest rounded-xl p-space-md shadow-sm flex flex-col gap-space-xs transition-transform active:scale-[0.99]">
+<div class="flex items-start justify-between gap-space-sm">
+<div class="flex-1 min-w-0">
+<h3 class="font-body-lg text-body-lg text-on-surface truncate">Cơm sườn bì chả</h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant">55.000đ / dĩa</p>
+</div>
+<div class="text-right">
+<span class="font-price-receipt text-price-receipt text-on-surface" id="subtotal-2">55.000đ</span>
+</div>
+</div>
+<div class="flex items-center justify-between pt-1">
+<button class="flex items-center gap-1 text-on-surface-variant/70 hover:text-primary active:scale-95 py-1" type="button">
+<span class="material-symbols-outlined text-[16px]">add_circle</span>
+<span class="font-label-sm text-[11px] underline">Thêm ghi chú</span>
+</button>
+<div class="flex items-center gap-space-xs bg-surface-container-low p-1 rounded-xl">
+<button class="w-9 h-9 rounded-lg bg-surface-container-lowest text-on-surface flex items-center justify-center font-bold active:bg-surface-variant shadow-sm active:scale-90 transition-transform" onclick="decrement(2, 55000)" type="button">
+<span class="material-symbols-outlined text-[18px]">remove</span>
+</button>
+<span class="w-7 text-center font-headline-sm text-headline-sm text-on-surface font-extrabold" id="qty-2">1</span>
+<button class="w-9 h-9 rounded-lg bg-surface-container-lowest text-on-surface flex items-center justify-center font-bold active:bg-surface-variant shadow-sm active:scale-90 transition-transform" onclick="increment(2, 55000)" type="button">
+<span class="material-symbols-outlined text-[18px]">add</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Item 3: Trứng ốp la -->
+<div class="bg-surface-container-lowest rounded-xl p-space-md shadow-sm flex flex-col gap-space-xs transition-transform active:scale-[0.99]">
+<div class="flex items-start justify-between gap-space-sm">
+<div class="flex-1 min-w-0">
+<h3 class="font-body-lg text-body-lg text-on-surface truncate">Trứng ốp la thêm</h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant">10.000đ / cái</p>
+</div>
+<div class="text-right">
+<span class="font-price-receipt text-price-receipt text-on-surface" id="subtotal-3">20.000đ</span>
+</div>
+</div>
+<div class="flex items-center justify-between pt-1">
+<div class="flex items-center gap-1 bg-surface-container-low px-2 py-1 rounded-lg text-on-surface-variant max-w-[60%]">
+<span class="material-symbols-outlined text-[14px] text-tertiary">edit_note</span>
+<span class="font-body-sm text-[12px] truncate text-tertiary font-medium">Lòng đào</span>
+</div>
+<div class="flex items-center gap-space-xs bg-surface-container-low p-1 rounded-xl">
+<button class="w-9 h-9 rounded-lg bg-surface-container-lowest text-on-surface flex items-center justify-center font-bold active:bg-surface-variant shadow-sm active:scale-90 transition-transform" onclick="decrement(3, 10000)" type="button">
+<span class="material-symbols-outlined text-[18px]">remove</span>
+</button>
+<span class="w-7 text-center font-headline-sm text-headline-sm text-on-surface font-extrabold" id="qty-3">2</span>
+<button class="w-9 h-9 rounded-lg bg-surface-container-lowest text-on-surface flex items-center justify-center font-bold active:bg-surface-variant shadow-sm active:scale-90 transition-transform" onclick="increment(3, 10000)" type="button">
+<span class="material-symbols-outlined text-[18px]">add</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Item 4: Coca-Cola -->
+<div class="bg-surface-container-lowest rounded-xl p-space-md shadow-sm flex flex-col gap-space-xs transition-transform active:scale-[0.99]">
+<div class="flex items-start justify-between gap-space-sm">
+<div class="flex-1 min-w-0">
+<h3 class="font-body-lg text-body-lg text-on-surface truncate">Coca-Cola (Lon)</h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant">15.000đ / lon</p>
+</div>
+<div class="text-right">
+<span class="font-price-receipt text-price-receipt text-on-surface" id="subtotal-4">15.000đ</span>
+</div>
+</div>
+<div class="flex items-center justify-between pt-1">
+<div class="flex items-center gap-1 bg-surface-container-low px-2 py-1 rounded-lg text-on-surface-variant max-w-[60%]">
+<span class="material-symbols-outlined text-[14px] text-tertiary">edit_note</span>
+<span class="font-body-sm text-[12px] truncate text-tertiary font-medium">Lấy ly đá</span>
+</div>
+<div class="flex items-center gap-space-xs bg-surface-container-low p-1 rounded-xl">
+<button class="w-9 h-9 rounded-lg bg-surface-container-lowest text-on-surface flex items-center justify-center font-bold active:bg-surface-variant shadow-sm active:scale-90 transition-transform" onclick="decrement(4, 15000)" type="button">
+<span class="material-symbols-outlined text-[18px]">remove</span>
+</button>
+<span class="w-7 text-center font-headline-sm text-headline-sm text-on-surface font-extrabold" id="qty-4">1</span>
+<button class="w-9 h-9 rounded-lg bg-surface-container-lowest text-on-surface flex items-center justify-center font-bold active:bg-surface-variant shadow-sm active:scale-90 transition-transform" onclick="increment(4, 15000)" type="button">
+<span class="material-symbols-outlined text-[18px]">add</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+<!-- Thermal Receipt Summary Card -->
+<div class="mx-margin mt-space-md p-space-md rounded-2xl bg-surface-container-low flex flex-col gap-space-xs"><div class="flex items-center justify-between"><span class="font-body-md text-body-md text-on-surface-variant">Số lượng</span><span class="font-label-lg text-label-lg text-on-surface" id="item-count">4 món (6 phần)</span></div><div class="my-2 h-0.5 w-full bg-surface-variant/70 rounded-full"></div><div class="flex items-baseline justify-between pt-1"><span class="font-headline-sm text-headline-sm text-on-surface font-bold">Tổng cộng</span><span class="font-price-display text-price-display text-primary tracking-tight font-extrabold" id="grand-total">180.000đ</span></div></div>
+<!-- Sticky Bottom Rapid Action Dock -->
+<div class="fixed bottom-0 left-0 right-0 z-40 bg-surface/95 backdrop-blur-md px-margin py-3 pb-safe shadow-[0_-4px_20px_rgba(0,0,0,0.08)]">
+<!-- Big Primary Print Trigger with Instant Tactile Feedback -->
+<button class="w-full h-14 bg-primary text-on-primary rounded-xl flex items-center justify-between px-space-lg shadow-md active:scale-[0.98] transition-all" id="print-btn" onclick="triggerFastPrint()" type="button"><div class="flex items-center gap-space-sm"><span class="material-symbols-outlined text-[26px]">print</span><span class="font-label-lg text-label-lg font-bold">In bill • <span id="btn-total" class="">180.000đ</span></span></div><span class="material-symbols-outlined text-[20px]">chevron_right</span></button>
+<div class="flex items-center justify-center gap-1.5 mt-2">
+<span class="material-symbols-outlined text-[14px] text-secondary">flash_on</span>
+<p class="text-center font-label-sm text-[11px] text-on-surface-variant">Lưu đơn &amp; gửi lệnh in Bluetooth 58mm</p>
+</div>
+</div>
+<!-- Micro-Feedback Overlay: Thermal Print Out Simulation Toast -->
+<div class="fixed inset-x-4 top-20 z-50 transform -translate-y-8 opacity-0 pointer-events-none transition-all duration-300 ease-out bg-inverse-surface text-inverse-on-surface p-3 rounded-xl shadow-xl flex items-center gap-3" id="print-toast">
+<div class="w-8 h-8 rounded-full bg-secondary flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-white text-[18px]">done</span>
+</div>
+<div class="flex-1 min-w-0">
+<p class="font-label-lg text-label-lg text-inverse-on-surface font-bold">Đang in bill #0124 (58mm)...</p>
+<p class="font-body-sm text-[11px] text-inverse-on-surface/80">Lệnh in đã gửi đến máy in hoá đơn nhiệt.</p>
+</div>
+</div>
+</div>
+<script>
+  // Fast state tracker for tactile quantity steppers
+  const state = {
+    1: { qty: 2, price: 45000 },
+    2: { qty: 1, price: 55000 },
+    3: { qty: 2, price: 10000 },
+    4: { qty: 1, price: 15000 }
+  };
+
+  function formatVND(amount) {
+    return amount.toLocaleString('vi-VN') + 'đ';
+  }
+
+  function updateTotals() {
+    let totalAmount = 0;
+    let totalItems = 0;
+    let activeCategories = 0;
+
+    for (let id in state) {
+      const q = state[id].qty;
+      const sub = q * state[id].price;
+      totalAmount += sub;
+      if (q > 0) {
+        totalItems += q;
+        activeCategories += 1;
+      }
+      const subEl = document.getElementById('subtotal-' + id);
+      if (subEl) subEl.textContent = formatVND(sub);
+      const qtyEl = document.getElementById('qty-' + id);
+      if (qtyEl) qtyEl.textContent = q;
+    }
+
+    const formatted = formatVND(totalAmount);
+    document.getElementById('grand-total').textContent = formatted;
+    document.getElementById('temp-total').textContent = formatted;
+    document.getElementById('btn-total').textContent = formatted;
+    document.getElementById('item-count').textContent = activeCategories + ' món (' + totalItems + ' phần)';
+  }
+
+  function increment(id, price) {
+    state[id].qty += 1;
+    if (navigator.vibrate) navigator.vibrate(10);
+    updateTotals();
+  }
+
+  function decrement(id, price) {
+    if (state[id].qty > 1) {
+      state[id].qty -= 1;
+      if (navigator.vibrate) navigator.vibrate(10);
+      updateTotals();
+    }
+  }
+
+  function triggerFastPrint() {
+    if (navigator.vibrate) navigator.vibrate([20, 40, 20]);
+    const toast = document.getElementById('print-toast');
+    toast.classList.remove('opacity-0', '-translate-y-8', 'pointer-events-none');
+    toast.classList.add('opacity-100', 'translate-y-0');
+
+    setTimeout(() => {
+      toast.classList.add('opacity-0', '-translate-y-8', 'pointer-events-none');
+      toast.classList.remove('opacity-100', 'translate-y-0');
+    }, 2400);
+  }
+</script></main>
+
+</body></html>
