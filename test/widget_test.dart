@@ -36,13 +36,20 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      if (label == 'Món') {
-        expect(find.text('Quản lý món'), findsOneWidget);
-      } else {
-        expect(
-          tester.widget<Text>(find.byKey(const Key('destination-title'))).data,
-          label,
-        );
+      switch (label) {
+        case 'Bán hàng':
+          expect(find.byKey(const Key('sales-search')), findsOneWidget);
+        case 'Đơn hàng':
+          expect(find.text('Danh sách đơn hàng'), findsOneWidget);
+        case 'Món':
+          expect(find.text('Quản lý món'), findsOneWidget);
+        default:
+          expect(
+            tester
+                .widget<Text>(find.byKey(const Key('destination-title')))
+                .data,
+            label,
+          );
       }
       expect(tester.takeException(), isNull);
     }

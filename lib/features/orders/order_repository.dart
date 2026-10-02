@@ -289,6 +289,19 @@ final class OrderRepository {
           .toList(growable: false),
     );
   }
+
+  Future<List<SavedOrder>> listOrders({OrderStatus? status}) async {
+    final query = _database.select(_database.orders)
+      ..orderBy([
+        (row) => OrderingTerm.desc(row.createdAt),
+        (row) => OrderingTerm.desc(row.id),
+      ]);
+    if (status != null) {
+      query.where((row) => row.status.equals(_statusToStorage(status)));
+    }
+    final rows = await query.get();
+    return Future.wait(rows.map((row) => loadOrder(row.id)));
+  }
 }
 
 String? _orderTypeToStorage(OrderType? type) => switch (type) {
@@ -309,4 +322,10 @@ OrderStatus _statusFromStorage(String value) => switch (value) {
   'PAID' => OrderStatus.paid,
   'CANCELLED' => OrderStatus.cancelled,
   _ => throw StateError('Unknown order status: $value'),
+};
+
+String _statusToStorage(OrderStatus status) => switch (status) {
+  OrderStatus.unpaid => 'UNPAID',
+  OrderStatus.paid => 'PAID',
+  OrderStatus.cancelled => 'CANCELLED',
 };

@@ -1,0 +1,259 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../app/theme.dart';
+import '../../core/money.dart';
+import 'order_providers.dart';
+import 'order_repository.dart';
+import 'orders_screen.dart';
+
+class OrderDetailsScreen extends ConsumerWidget {
+  const OrderDetailsScreen({required this.orderId, super.key});
+  final int orderId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final order = ref.watch(orderDetailsProvider(orderId));
+    return Scaffold(
+      appBar: AppBar(title: const Text('Chi tiết đơn & bill 58mm')),
+      body: order.when(
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (error, _) => Center(child: Text('Không thể tải đơn: $error')),
+        data: (value) => _Details(order: value),
+      ),
+    );
+  }
+}
+
+class _Details extends ConsumerWidget {
+  const _Details({required this.order});
+  final SavedOrder order;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) => Column(
+    children: [
+      Expanded(
+        child: ListView(
+          padding: const EdgeInsets.all(16),
+          children: [
+            Row(
+              children: [
+                Text(
+                  '#${order.orderNumber.toString().padLeft(4, '0')}',
+                  style: const TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const Spacer(),
+                OrderStatusBadge(status: order.status),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Text(
+              _dateTime(order.createdAt),
+              style: const TextStyle(color: AppColors.secondaryInk),
+            ),
+            if (order.orderType != null) ...[
+              const SizedBox(height: 8),
+              Text(
+                order.orderType == OrderType.dineIn ? 'Tại quán' : 'Mang về',
+                style: const TextStyle(fontWeight: FontWeight.w700),
+              ),
+            ],
+            const SizedBox(height: 16),
+            _Receipt(order: order),
+          ],
+        ),
+      ),
+      SafeArea(
+        top: false,
+        child: Material(
+          color: Colors.white,
+          elevation: 8,
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (order.status == OrderStatus.unpaid)
+                  SizedBox(
+                    width: double.infinity,
+                    child: FilledButton.icon(
+                      key: const Key('mark-paid'),
+                      onPressed: () => ref
+                          .read(orderListControllerProvider.notifier)
+                          .markPaid(order.id),
+                      icon: const Icon(Icons.check_circle_outline),
+                      label: const Text('Đánh dấu đã trả'),
+                      style: FilledButton.styleFrom(
+                        backgroundColor: AppColors.success,
+                      ),
+                    ),
+                  ),
+                if (order.status != OrderStatus.cancelled) ...[
+                  const SizedBox(height: 8),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      key: const Key('cancel-order'),
+                      onPressed: () => _confirmCancel(context, ref),
+                      icon: const Icon(Icons.cancel_outlined),
+                      label: const Text('Hủy đơn'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppColors.error,
+                        minimumSize: const Size(48, 52),
+                      ),
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 8),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    key: const Key('reprint-order'),
+                    onPressed: null,
+                    icon: const Icon(Icons.print_outlined),
+                    label: Text(
+                      order.status == OrderStatus.cancelled
+                          ? 'Không thể in lại đơn đã hủy'
+                          : 'In lại • Chưa kết nối',
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    ],
+  );
+
+  Future<void> _confirmCancel(BuildContext context, WidgetRef ref) async {
+    final paid = order.status == OrderStatus.paid;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Xác nhận hủy đơn'),
+        content: Text(
+          paid
+              ? 'Đơn này đã được đánh dấu thanh toán. V1 không có quy trình hoàn tiền. Bạn vẫn muốn hủy đơn?'
+              : 'Đơn sẽ chuyển sang trạng thái đã hủy và không thể khôi phục.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Không hủy'),
+          ),
+          FilledButton(
+            key: const Key('confirm-cancel-order'),
+            onPressed: () => Navigator.pop(context, true),
+            style: FilledButton.styleFrom(backgroundColor: AppColors.error),
+            child: const Text('Hủy đơn'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true) {
+      await ref.read(orderListControllerProvider.notifier).cancel(order.id);
+    }
+  }
+}
+
+class _Receipt extends StatelessWidget {
+  const _Receipt({required this.order});
+  final SavedOrder order;
+  @override
+  Widget build(BuildContext context) => Card(
+    child: Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 20),
+      child: Column(
+        children: [
+          Text(
+            order.receiptSettings.shopName,
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
+          ),
+          if (order.receiptSettings.address.isNotEmpty)
+            Text(order.receiptSettings.address, textAlign: TextAlign.center),
+          if (order.receiptSettings.phone.isNotEmpty)
+            Text(order.receiptSettings.phone, textAlign: TextAlign.center),
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 12),
+            child: Divider(),
+          ),
+          for (final item in order.items) ...[
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Text(
+                    '${item.productName} ×${item.quantity}',
+                    style: const TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                ),
+                Text(
+                  formatVnd(item.lineTotal),
+                  style: const TextStyle(fontWeight: FontWeight.w700),
+                ),
+              ],
+            ),
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    '${formatVnd(item.unitPrice)} / phần',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: AppColors.secondaryInk,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            if (item.note != null && item.note!.isNotEmpty)
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  item.note!,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontStyle: FontStyle.italic,
+                  ),
+                ),
+              ),
+            const SizedBox(height: 10),
+          ],
+          const Divider(),
+          Row(
+            children: [
+              const Text(
+                'TỔNG CỘNG',
+                style: TextStyle(fontWeight: FontWeight.w800),
+              ),
+              const Spacer(),
+              Text(
+                formatVnd(order.total),
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.primary,
+                ),
+              ),
+            ],
+          ),
+          if (order.receiptSettings.footer.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            Text(order.receiptSettings.footer, textAlign: TextAlign.center),
+          ],
+        ],
+      ),
+    ),
+  );
+}
+
+String _dateTime(int epoch) {
+  final value = DateTime.fromMillisecondsSinceEpoch(epoch);
+  String two(int number) => number.toString().padLeft(2, '0');
+  return '${two(value.hour)}:${two(value.minute)} • ${two(value.day)}/${two(value.month)}/${value.year}';
+}

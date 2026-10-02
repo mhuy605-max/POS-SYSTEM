@@ -24,6 +24,11 @@ final class OrderService {
   final OrderRepository _repository;
   final EpochClock _nowEpochMillis;
 
+  /// Persists the complete reviewed order. Stage 4 attaches printing after
+  /// this boundary; Stage 3 deliberately performs no printer I/O.
+  Future<int> submitForPrint(OrderDraft draft) =>
+      _repository.createOrder(draft);
+
   Future<SavedOrder> markPaid(int orderId) async {
     await _database.transaction(() async {
       final order = await (_database.select(

@@ -5,6 +5,10 @@ import 'package:go_router/go_router.dart';
 import '../features/products/category_management_screen.dart';
 import '../features/products/product_form_screen.dart';
 import '../features/products/products_screen.dart';
+import '../features/orders/order_details_screen.dart';
+import '../features/orders/orders_screen.dart';
+import '../features/sales/review_screen.dart';
+import '../features/sales/sales_screen.dart';
 
 const _destinations = [
   (path: '/sales', label: 'Bán hàng', icon: Icons.point_of_sale_outlined),
@@ -68,17 +72,29 @@ final routerProvider = Provider<GoRouter>((ref) {
               path: destination.path,
               pageBuilder: (context, state) => NoTransitionPage<void>(
                 key: state.pageKey,
-                child: destination.path == '/products'
-                    ? const ProductsScreen()
-                    : Center(
-                        child: Text(
-                          destination.label,
-                          key: const Key('destination-title'),
-                        ),
-                      ),
+                child: switch (destination.path) {
+                  '/sales' => const SalesScreen(),
+                  '/orders' => const OrdersScreen(),
+                  '/products' => const ProductsScreen(),
+                  _ => Center(
+                    child: Text(
+                      destination.label,
+                      key: const Key('destination-title'),
+                    ),
+                  ),
+                },
               ),
             ),
         ],
+      ),
+      GoRoute(
+        path: '/sales/current',
+        builder: (context, state) => const ReviewScreen(),
+      ),
+      GoRoute(
+        path: '/orders/:id',
+        builder: (context, state) =>
+            OrderDetailsScreen(orderId: int.parse(state.pathParameters['id']!)),
       ),
       GoRoute(
         path: '/products/add',
