@@ -7,6 +7,8 @@ import 'package:go_router/go_router.dart';
 import '../../core/money.dart';
 import '../../app/theme.dart';
 import '../orders/order_providers.dart';
+import '../orders/order_repository.dart';
+import '../printing/printer_models.dart';
 import '../products/catalog_controller.dart';
 import '../products/product_repository.dart';
 import 'cart_controller.dart';
@@ -147,17 +149,17 @@ class _SalesScreenState extends ConsumerState<SalesScreen> {
               child: FilledButton(
                 key: const Key('open-current-order'),
                 onPressed: () async {
-                  final orderId = await context.push<int>('/sales/current');
-                  if (orderId != null && context.mounted) {
+                  final result = await context.push<OrderSubmissionResult>(
+                    '/sales/current',
+                  );
+                  if (result != null && context.mounted) {
                     final saved = await ref
                         .read(orderRepositoryProvider)
-                        .loadOrder(orderId);
+                        .loadOrder(result.orderId);
                     if (!context.mounted) return;
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
-                        content: Text(
-                          'Đã lưu đơn #${saved.orderNumber.toString().padLeft(4, '0')}',
-                        ),
+                        content: Text(_submissionFeedback(saved, result)),
                       ),
                     );
                   }
@@ -180,6 +182,20 @@ class _SalesScreenState extends ConsumerState<SalesScreen> {
       ],
     );
   }
+}
+
+String _submissionFeedback(SavedOrder order, OrderSubmissionResult result) {
+  final saved = 'Đã lưu đơn #${order.orderNumber.toString().padLeft(4, '0')}.';
+  return switch (result.printResult.kind) {
+    PrintResultKind.sent =>
+      '$saved Dữ liệu đã gửi tới máy in; hãy kiểm tra giấy.',
+    PrintResultKind.unknown =>
+      '$saved Kết quả gửi chưa rõ; ứng dụng sẽ không tự động in lại.',
+    PrintResultKind.failed =>
+      result.printResult.errorCode == PrinterErrorCode.notConfigured
+          ? '$saved Chưa cấu hình máy in.'
+          : '$saved Không gửi được tới máy in. Có thể in lại từ Đơn hàng.',
+  };
 }
 
 class _CategoryChip extends StatelessWidget {

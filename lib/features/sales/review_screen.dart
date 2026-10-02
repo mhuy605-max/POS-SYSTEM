@@ -140,7 +140,7 @@ class ReviewScreen extends ConsumerWidget {
                       ),
                       const SizedBox(height: 5),
                       const Text(
-                        'Lưu đơn; kết nối máy in sẽ được bổ sung ở Stage 4',
+                        'Đơn được lưu trước, sau đó gửi đến máy in đã chọn',
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           fontSize: 11,
@@ -160,9 +160,9 @@ class ReviewScreen extends ConsumerWidget {
 
   Future<void> _submit(BuildContext context, WidgetRef ref) async {
     try {
-      final id = await ref.read(cartControllerProvider.notifier).submit();
+      final result = await ref.read(cartControllerProvider.notifier).submit();
       if (context.mounted && ModalRoute.of(context)?.isCurrent == true) {
-        context.pop(id);
+        context.pop(result);
       }
     } catch (_) {
       if (context.mounted) {

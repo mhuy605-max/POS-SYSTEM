@@ -6,9 +6,12 @@ import '../../core/money.dart';
 import '../orders/order_providers.dart';
 import '../orders/order_repository.dart';
 import '../products/product_repository.dart';
+import '../printing/printer_models.dart';
+import '../printing/printer_providers.dart';
 
 typedef CartTokenFactory = String Function();
 typedef OrderSubmitter = Future<int> Function(OrderDraft draft);
+typedef OrderPrinter = Future<PrintResult> Function(int orderId);
 
 final cartTokenFactoryProvider = Provider<CartTokenFactory>((ref) {
   final random = Random.secure();
@@ -20,6 +23,20 @@ final cartTokenFactoryProvider = Provider<CartTokenFactory>((ref) {
 final orderSubmitterProvider = Provider<OrderSubmitter>((ref) {
   return ref.watch(orderServiceProvider).submitForPrint;
 });
+
+final orderPrinterProvider = Provider<OrderPrinter>((ref) {
+  return ref.watch(printerServiceProvider).printOrder;
+});
+
+final class OrderSubmissionResult {
+  const OrderSubmissionResult({
+    required this.orderId,
+    required this.printResult,
+  });
+
+  final int orderId;
+  final PrintResult printResult;
+}
 
 final cartControllerProvider = NotifierProvider<CartController, CartState>(
   CartController.new,
@@ -97,7 +114,7 @@ final class CartState {
 }
 
 final class CartController extends Notifier<CartState> {
-  Future<int>? _submission;
+  Future<OrderSubmissionResult>? _submission;
   int _nextLineId = 1;
 
   @override
@@ -184,7 +201,7 @@ final class CartController extends Notifier<CartState> {
     state = CartState(submissionToken: ref.read(cartTokenFactoryProvider)());
   }
 
-  Future<int> submit() {
+  Future<OrderSubmissionResult> submit() {
     final existing = _submission;
     if (existing != null) return existing;
     if (state.lines.isEmpty) {
@@ -211,16 +228,30 @@ final class CartController extends Notifier<CartState> {
     return operation;
   }
 
-  Future<int> _performSubmit(OrderDraft draft, String submittedToken) async {
+  Future<OrderSubmissionResult> _performSubmit(
+    OrderDraft draft,
+    String submittedToken,
+  ) async {
     try {
       final id = await ref.read(orderSubmitterProvider)(draft);
       if (state.submissionToken == submittedToken) {
         state = CartState(
           submissionToken: ref.read(cartTokenFactoryProvider)(),
+          isSubmitting: true,
         );
       }
       ref.invalidate(orderListControllerProvider);
-      return id;
+      PrintResult printResult;
+      try {
+        printResult = await ref.read(orderPrinterProvider)(id);
+      } catch (_) {
+        printResult = const PrintResult.failed(
+          PrinterErrorCode.writeFailed,
+          'Đơn đã được lưu nhưng không thể gửi tới máy in.',
+        );
+      }
+      state = state.copyWith(isSubmitting: false);
+      return OrderSubmissionResult(orderId: id, printResult: printResult);
     } catch (error) {
       state = state.copyWith(
         isSubmitting: false,

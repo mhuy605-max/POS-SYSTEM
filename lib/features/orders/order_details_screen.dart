@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/theme.dart';
 import '../../core/money.dart';
+import '../printing/printer_models.dart';
+import '../printing/printer_providers.dart';
 import 'order_providers.dart';
 import 'order_repository.dart';
 import 'orders_screen.dart';
@@ -108,19 +110,7 @@ class _Details extends ConsumerWidget {
                   ),
                 ],
                 const SizedBox(height: 8),
-                SizedBox(
-                  width: double.infinity,
-                  child: OutlinedButton.icon(
-                    key: const Key('reprint-order'),
-                    onPressed: null,
-                    icon: const Icon(Icons.print_outlined),
-                    label: Text(
-                      order.status == OrderStatus.cancelled
-                          ? 'Không thể in lại đơn đã hủy'
-                          : 'In lại • Chưa kết nối',
-                    ),
-                  ),
-                ),
+                _ReprintButton(order: order),
               ],
             ),
           ),
@@ -159,6 +149,67 @@ class _Details extends ConsumerWidget {
     }
   }
 }
+
+class _ReprintButton extends ConsumerStatefulWidget {
+  const _ReprintButton({required this.order});
+  final SavedOrder order;
+
+  @override
+  ConsumerState<_ReprintButton> createState() => _ReprintButtonState();
+}
+
+class _ReprintButtonState extends ConsumerState<_ReprintButton> {
+  var _busy = false;
+
+  @override
+  Widget build(BuildContext context) => SizedBox(
+    width: double.infinity,
+    child: OutlinedButton.icon(
+      key: const Key('reprint-order'),
+      onPressed: widget.order.status == OrderStatus.cancelled || _busy
+          ? null
+          : _reprint,
+      icon: _busy
+          ? const SizedBox.square(
+              dimension: 18,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            )
+          : const Icon(Icons.print_outlined),
+      label: Text(
+        widget.order.status == OrderStatus.cancelled
+            ? 'Không thể in lại đơn đã hủy'
+            : 'In lại bill',
+      ),
+    ),
+  );
+
+  Future<void> _reprint() async {
+    setState(() => _busy = true);
+    PrintResult result;
+    try {
+      result = await ref
+          .read(printerServiceProvider)
+          .reprintOrder(widget.order.id);
+    } catch (_) {
+      result = const PrintResult.failed(
+        PrinterErrorCode.writeFailed,
+        'Không thể chuẩn bị yêu cầu in lại.',
+      );
+    }
+    if (!mounted) return;
+    setState(() => _busy = false);
+    ref.invalidate(orderDetailsProvider(widget.order.id));
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(_printResultMessage(result))));
+  }
+}
+
+String _printResultMessage(PrintResult result) => switch (result.kind) {
+  PrintResultKind.sent => 'Dữ liệu đã gửi tới máy in; hãy kiểm tra giấy.',
+  PrintResultKind.unknown =>
+    'Kết quả gửi chưa rõ. Ứng dụng sẽ không tự động in lại.',
+  PrintResultKind.failed => result.message,
+};
 
 class _Receipt extends StatelessWidget {
   const _Receipt({required this.order});

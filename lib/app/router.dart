@@ -9,6 +9,8 @@ import '../features/orders/order_details_screen.dart';
 import '../features/orders/orders_screen.dart';
 import '../features/sales/review_screen.dart';
 import '../features/sales/sales_screen.dart';
+import '../features/settings/printer_settings_screen.dart';
+import '../features/settings/settings_screen.dart';
 
 const _destinations = [
   (path: '/sales', label: 'Bán hàng', icon: Icons.point_of_sale_outlined),
@@ -76,6 +78,7 @@ final routerProvider = Provider<GoRouter>((ref) {
                   '/sales' => const SalesScreen(),
                   '/orders' => const OrdersScreen(),
                   '/products' => const ProductsScreen(),
+                  '/settings' => const SettingsScreen(),
                   _ => Center(
                     child: Text(
                       destination.label,
@@ -95,6 +98,10 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/orders/:id',
         builder: (context, state) =>
             OrderDetailsScreen(orderId: int.parse(state.pathParameters['id']!)),
+      ),
+      GoRoute(
+        path: '/settings/printer',
+        builder: (context, state) => const PrinterSettingsScreen(),
       ),
       GoRoute(
         path: '/products/add',

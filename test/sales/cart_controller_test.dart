@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:dakao_in_bill/features/orders/order_repository.dart';
 import 'package:dakao_in_bill/features/products/product_repository.dart';
+import 'package:dakao_in_bill/features/printing/printer_models.dart';
 import 'package:dakao_in_bill/features/sales/cart_controller.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -23,6 +24,9 @@ void main() {
           submissions.add(draft);
           return nextOrderId;
         }),
+        orderPrinterProvider.overrideWithValue(
+          (_) async => const PrintResult.sent(),
+        ),
       ],
     );
     addTearDown(container.dispose);
@@ -118,7 +122,7 @@ void main() {
 
       final result = await controller.submit();
 
-      expect(result, nextOrderId);
+      expect(result.orderId, nextOrderId);
       expect(submissions, hasLength(1));
       expect(submissions.single.submissionToken, originalToken);
       expect(submissions.single.orderType, isNull);
@@ -162,6 +166,9 @@ void main() {
             calls++;
             return gate.future;
           }),
+          orderPrinterProvider.overrideWithValue(
+            (_) async => const PrintResult.sent(),
+          ),
         ],
       );
       addTearDown(guarded.dispose);
@@ -172,8 +179,8 @@ void main() {
       final second = controller.submit();
       gate.complete(7);
 
-      expect(await first, 7);
-      expect(await second, 7);
+      expect((await first).orderId, 7);
+      expect((await second).orderId, 7);
       expect(calls, 1);
       expect(guarded.read(cartControllerProvider).lines, isEmpty);
     },
@@ -185,6 +192,9 @@ void main() {
       overrides: [
         cartTokenFactoryProvider.overrideWithValue(() => 'locked-token'),
         orderSubmitterProvider.overrideWithValue((_) => gate.future),
+        orderPrinterProvider.overrideWithValue(
+          (_) async => const PrintResult.sent(),
+        ),
       ],
     );
     addTearDown(guarded.dispose);
@@ -208,9 +218,69 @@ void main() {
     expect(locked.submissionToken, 'locked-token');
 
     gate.complete(9);
-    expect(await submission, 9);
+    expect((await submission).orderId, 9);
     expect(guarded.read(cartControllerProvider).lines, isEmpty);
   });
+
+  test(
+    'cart stays locked until the saved order print attempt finishes',
+    () async {
+      final printGate = Completer<PrintResult>();
+      final guarded = ProviderContainer(
+        overrides: [
+          cartTokenFactoryProvider.overrideWithValue(() => 'print-lock-token'),
+          orderSubmitterProvider.overrideWithValue((_) async => 10),
+          orderPrinterProvider.overrideWithValue((_) => printGate.future),
+        ],
+      );
+      addTearDown(guarded.dispose);
+      final controller = guarded.read(cartControllerProvider.notifier);
+      controller.addProduct(_product());
+
+      final submission = controller.submit();
+      await Future<void>.delayed(Duration.zero);
+
+      final printing = guarded.read(cartControllerProvider);
+      expect(printing.lines, isEmpty);
+      expect(printing.isSubmitting, isTrue);
+      expect(controller.addProduct(_product(id: 2)), isFalse);
+
+      printGate.complete(const PrintResult.sent());
+      expect((await submission).orderId, 10);
+      expect(guarded.read(cartControllerProvider).isSubmitting, isFalse);
+      expect(controller.addProduct(_product(id: 2)), isTrue);
+    },
+  );
+
+  test(
+    'successful save clears cart before printer transport is invoked',
+    () async {
+      late ProviderContainer ordered;
+      var cartWasClearBeforePrint = false;
+      ordered = ProviderContainer(
+        overrides: [
+          cartTokenFactoryProvider.overrideWithValue(() => 'ordered-token'),
+          orderSubmitterProvider.overrideWithValue((_) async => 77),
+          orderPrinterProvider.overrideWithValue((orderId) async {
+            cartWasClearBeforePrint = ordered
+                .read(cartControllerProvider)
+                .lines
+                .isEmpty;
+            return const PrintResult.sent();
+          }),
+        ],
+      );
+      addTearDown(ordered.dispose);
+      final controller = ordered.read(cartControllerProvider.notifier);
+      controller.addProduct(_product());
+
+      final result = await controller.submit();
+
+      expect(result.orderId, 77);
+      expect(result.printResult.kind, PrintResultKind.sent);
+      expect(cartWasClearBeforePrint, isTrue);
+    },
+  );
 }
 
 CatalogProduct _product({int id = 1, bool isAvailable = true}) =>

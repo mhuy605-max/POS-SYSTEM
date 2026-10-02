@@ -43,6 +43,11 @@ void main() {
           expect(find.text('Danh sách đơn hàng'), findsOneWidget);
         case 'Món':
           expect(find.text('Quản lý món'), findsOneWidget);
+        case 'Cài đặt':
+          expect(
+            find.byKey(const Key('open-printer-settings')),
+            findsOneWidget,
+          );
         default:
           expect(
             tester

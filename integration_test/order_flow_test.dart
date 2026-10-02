@@ -1,9 +1,16 @@
+import 'dart:typed_data';
+
 import 'package:dakao_in_bill/app/app.dart';
 import 'package:dakao_in_bill/data/app_database.dart';
 import 'package:dakao_in_bill/data/database_provider.dart';
 import 'package:dakao_in_bill/features/orders/order_repository.dart';
 import 'package:dakao_in_bill/features/products/catalog_controller.dart';
 import 'package:dakao_in_bill/features/products/product_repository.dart';
+import 'package:dakao_in_bill/features/printing/printer_models.dart';
+import 'package:dakao_in_bill/features/printing/printer_providers.dart';
+import 'package:dakao_in_bill/features/printing/printer_settings_repository.dart';
+import 'package:dakao_in_bill/features/printing/printer_transport.dart';
+import 'package:dakao_in_bill/features/printing/receipt_renderer.dart';
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -24,6 +31,10 @@ void main() {
     final product = await products.createProduct(
       ProductDraft(categoryId: category, name: 'Cà phê sữa', price: 25000),
     );
+    await PrinterSettingsRepository(database).saveSelected(
+      const PrinterDevice(name: 'Fake 58mm', address: 'FA:KE:00:00:00:01'),
+    );
+    final transport = _IntegrationTransport(orders);
 
     Future<void> pumpApp() async {
       await tester.pumpWidget(
@@ -31,6 +42,10 @@ void main() {
           overrides: [
             appDatabaseProvider.overrideWithValue(database),
             productRepositoryProvider.overrideWithValue(products),
+            printerTransportProvider.overrideWithValue(transport),
+            receiptRendererProvider.overrideWithValue(
+              const _IntegrationRenderer(),
+            ),
           ],
           child: const DakaoInBillApp(),
         ),
@@ -49,6 +64,8 @@ void main() {
     final saved = (await orders.listOrders()).single;
     expect(saved.status, OrderStatus.unpaid);
     expect(saved.items.single.note, 'Ít đá');
+    expect(transport.sendCount, 1);
+    expect(transport.orderExistedWhenSent, isTrue);
 
     await tester.tap(
       find.descendant(
@@ -78,4 +95,47 @@ void main() {
     expect(find.text('#0001'), findsOneWidget);
     expect(find.text('Đã thanh toán'), findsOneWidget);
   });
+}
+
+final class _IntegrationTransport implements PrinterTransport {
+  _IntegrationTransport(this.orders);
+  final OrderRepository orders;
+  var sendCount = 0;
+  var orderExistedWhenSent = false;
+
+  @override
+  Future<PrinterStatus> connect(String address) async =>
+      PrinterStatus(PrinterAdapterState.connected, address: address);
+
+  @override
+  Future<void> disconnect() async {}
+
+  @override
+  Future<PrinterStatus> getStatus() async => const PrinterStatus.disconnected();
+
+  @override
+  Future<List<PrinterDevice>> listPairedDevices() async => const [];
+
+  @override
+  Future<bool> requestPermissions() async => true;
+
+  @override
+  Future<PrintResult> send(String address, Uint8List bytes) async {
+    sendCount++;
+    orderExistedWhenSent = (await orders.listOrders()).isNotEmpty;
+    return const PrintResult.sent();
+  }
+}
+
+final class _IntegrationRenderer extends ReceiptRenderer {
+  const _IntegrationRenderer();
+
+  @override
+  Future<RenderedReceipt> renderOrder(SavedOrder order) async =>
+      RenderedReceipt(
+        bytes: Uint8List.fromList(<int>[0x1b, 0x40, 0x0a]),
+        widthDots: 384,
+        heightDots: 1,
+        bandHeights: const <int>[1],
+      );
 }

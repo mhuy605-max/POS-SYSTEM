@@ -24,8 +24,8 @@ final class OrderService {
   final OrderRepository _repository;
   final EpochClock _nowEpochMillis;
 
-  /// Persists the complete reviewed order. Stage 4 attaches printing after
-  /// this boundary; Stage 3 deliberately performs no printer I/O.
+  /// Persists the complete reviewed order. Printing starts only after this
+  /// boundary commits and is not part of this transaction.
   Future<int> submitForPrint(OrderDraft draft) =>
       _repository.createOrder(draft);
 
