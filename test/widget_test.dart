@@ -41,6 +41,8 @@ void main() {
           expect(find.byKey(const Key('sales-search')), findsOneWidget);
         case 'Đơn hàng':
           expect(find.text('Danh sách đơn hàng'), findsOneWidget);
+        case 'Doanh thu':
+          expect(find.byKey(const Key('recognized-revenue')), findsOneWidget);
         case 'Món':
           expect(find.text('Quản lý món'), findsOneWidget);
         case 'Cài đặt':

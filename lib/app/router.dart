@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../features/products/category_management_screen.dart';
 import '../features/products/product_form_screen.dart';
 import '../features/products/products_screen.dart';
+import '../features/revenue/revenue_screen.dart';
 import '../features/orders/order_details_screen.dart';
 import '../features/orders/orders_screen.dart';
 import '../features/sales/review_screen.dart';
@@ -77,6 +78,7 @@ final routerProvider = Provider<GoRouter>((ref) {
                 child: switch (destination.path) {
                   '/sales' => const SalesScreen(),
                   '/orders' => const OrdersScreen(),
+                  '/revenue' => const RevenueScreen(),
                   '/products' => const ProductsScreen(),
                   '/settings' => const SettingsScreen(),
                   _ => Center(
