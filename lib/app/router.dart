@@ -11,7 +11,9 @@ import '../features/orders/orders_screen.dart';
 import '../features/sales/review_screen.dart';
 import '../features/sales/sales_screen.dart';
 import '../features/settings/printer_settings_screen.dart';
+import '../features/settings/backup_screen.dart';
 import '../features/settings/settings_screen.dart';
+import '../features/settings/shop_settings_screen.dart';
 
 const _destinations = [
   (path: '/sales', label: 'Bán hàng', icon: Icons.point_of_sale_outlined),
@@ -104,6 +106,14 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/settings/printer',
         builder: (context, state) => const PrinterSettingsScreen(),
+      ),
+      GoRoute(
+        path: '/settings/shop',
+        builder: (context, state) => const ShopSettingsScreen(),
+      ),
+      GoRoute(
+        path: '/settings/backup',
+        builder: (context, state) => const BackupScreen(),
       ),
       GoRoute(
         path: '/products/add',

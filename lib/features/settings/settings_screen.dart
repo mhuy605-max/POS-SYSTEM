@@ -21,6 +21,14 @@ class SettingsScreen extends ConsumerWidget {
               ?.copyWith(fontWeight: FontWeight.w800),
         ),
         const SizedBox(height: 16),
+        _SettingsEntry(
+          key: const Key('open-shop-settings'),
+          icon: Icons.storefront_outlined,
+          title: 'Thông tin quán & bill',
+          subtitle: 'Tên quán, liên hệ và lời nhắn trên bill',
+          onTap: () => context.push('/settings/shop'),
+        ),
+        const SizedBox(height: 12),
         Card(
           child: InkWell(
             key: const Key('open-printer-settings'),
@@ -62,6 +70,14 @@ class SettingsScreen extends ConsumerWidget {
           ),
         ),
         const SizedBox(height: 12),
+        _SettingsEntry(
+          key: const Key('open-backup-settings'),
+          icon: Icons.settings_backup_restore_outlined,
+          title: 'Sao lưu & khôi phục',
+          subtitle: 'Xuất và khôi phục tệp .dakbackup cục bộ',
+          onTap: () => context.push('/settings/backup'),
+        ),
+        const SizedBox(height: 12),
         const Card(
           child: Padding(
             padding: EdgeInsets.all(16),
@@ -81,6 +97,52 @@ class SettingsScreen extends ConsumerWidget {
       ],
     );
   }
+}
+
+class _SettingsEntry extends StatelessWidget {
+  const _SettingsEntry({
+    super.key,
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.onTap,
+  });
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final VoidCallback onTap;
+  @override
+  Widget build(BuildContext context) => Card(
+    child: InkWell(
+      borderRadius: BorderRadius.circular(16),
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
+            Icon(icon, color: AppColors.primary, size: 30),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(fontWeight: FontWeight.w800),
+                  ),
+                  Text(
+                    subtitle,
+                    style: const TextStyle(color: AppColors.secondaryInk),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(Icons.chevron_right),
+          ],
+        ),
+      ),
+    ),
+  );
 }
 
 String _summary(PrinterAdapterState state) => switch (state) {

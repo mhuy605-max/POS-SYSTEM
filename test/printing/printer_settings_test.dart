@@ -94,6 +94,30 @@ void main() {
     expect(find.text('Bluetooth đang tắt'), findsOneWidget);
     expect(transport.enableRequests, 0);
   });
+
+  testWidgets('restored printer identity cannot inherit another connection', (
+    tester,
+  ) async {
+    await PrinterSettingsRepository(database)
+        .saveSelected(const PrinterDevice(name: 'Restored', address: 'AA:BB'));
+    final transport = FakeSettingsTransport(
+      status: const PrinterStatus(
+        PrinterAdapterState.connected,
+        deviceName: 'Old printer',
+        address: '11:22',
+      ),
+    );
+
+    await _pump(tester, database, products, transport);
+    await tester.tap(find.text('Cài đặt'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('open-printer-settings')));
+    await tester.pumpAndSettle();
+
+    expect(transport.status.state, PrinterAdapterState.disconnected);
+    expect(find.text('Chưa kết nối'), findsOneWidget);
+    expect(find.textContaining('Đã chọn Restored'), findsOneWidget);
+  });
 }
 
 Future<void> _pump(

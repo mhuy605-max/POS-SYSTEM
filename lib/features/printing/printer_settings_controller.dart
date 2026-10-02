@@ -88,7 +88,12 @@ final class PrinterSettingsController
   Future<PrinterSettingsState> _load() async {
     final transport = ref.read(printerTransportProvider);
     final settings = await ref.read(printerSettingsRepositoryProvider).load();
-    final status = await transport.getStatus();
+    var status = await transport.getStatus();
+    if (status.state == PrinterAdapterState.connected &&
+        status.address != settings.printerAddress) {
+      await transport.disconnect();
+      status = const PrinterStatus.disconnected();
+    }
     var devices = const <PrinterDevice>[];
     if (status.state == PrinterAdapterState.disconnected ||
         status.state == PrinterAdapterState.connected) {
