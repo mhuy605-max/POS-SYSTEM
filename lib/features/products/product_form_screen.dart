@@ -295,6 +295,9 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
                                           : AppColors.secondaryInk,
                                       fontWeight: FontWeight.w700,
                                     ),
+                                    chipAnimationStyle: AppMotion.chipStyle(
+                                      context,
+                                    ),
                                   ),
                               ],
                             ),

@@ -13,74 +13,82 @@ class OrdersScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final orders = ref.watch(orderListControllerProvider);
-    final filter = ref.read(orderListControllerProvider.notifier).filter;
     return RefreshIndicator(
       onRefresh: ref.read(orderListControllerProvider.notifier).refresh,
       child: CustomScrollView(
         slivers: [
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-              child: SegmentedButton<OrderListFilter>(
-                key: const Key('orders-filter'),
-                showSelectedIcon: false,
-                segments: const [
-                  ButtonSegment(
-                    value: OrderListFilter.all,
-                    label: Text('Tất cả'),
-                  ),
-                  ButtonSegment(
-                    value: OrderListFilter.unpaid,
-                    label: Text('Chưa trả'),
-                  ),
-                  ButtonSegment(
-                    value: OrderListFilter.paid,
-                    label: Text('Đã trả'),
-                  ),
-                ],
-                selected: {filter},
-                onSelectionChanged: (value) => ref
-                    .read(orderListControllerProvider.notifier)
-                    .setFilter(value.single),
-              ),
-            ),
-          ),
-          orders.when(
-            loading: () => const SliverFillRemaining(
-              child: AppLoadingState(label: 'Đang tải đơn hàng'),
-            ),
-            error: (error, _) => SliverFillRemaining(
-              child: AppAsyncError(
-                message: 'Không thể tải danh sách đơn hàng.',
-                onRetry: ref.read(orderListControllerProvider.notifier).refresh,
-              ),
-            ),
-            data: (items) => items.isEmpty
-                ? SliverFillRemaining(
-                    hasScrollBody: false,
-                    child: AppEmptyState(
-                      icon: Icons.receipt_long_outlined,
-                      title: filter == OrderListFilter.all
-                          ? 'Chưa có đơn hàng'
-                          : 'Chưa có đơn phù hợp',
-                      message: filter == OrderListFilter.all
-                          ? 'Đơn đã lưu sẽ xuất hiện tại đây.'
-                          : 'Thử chọn trạng thái khác để xem đơn.',
-                    ),
-                  )
-                : SliverPadding(
-                    padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
-                    sliver: SliverList.separated(
-                      itemCount: items.length,
-                      separatorBuilder: (_, _) => const SizedBox(height: 12),
-                      itemBuilder: (context, index) =>
-                          _OrderCard(order: items[index]),
-                    ),
-                  ),
-          ),
+          const SliverToBoxAdapter(child: _OrderFilters()),
+          const _OrderResults(),
         ],
       ),
+    );
+  }
+}
+
+class _OrderFilters extends ConsumerWidget {
+  const _OrderFilters();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final filter = ref.watch(orderListFilterProvider);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+      child: SegmentedButton<OrderListFilter>(
+        key: const Key('orders-filter'),
+        showSelectedIcon: false,
+        segments: const [
+          ButtonSegment(value: OrderListFilter.all, label: Text('Tất cả')),
+          ButtonSegment(value: OrderListFilter.unpaid, label: Text('Chưa trả')),
+          ButtonSegment(value: OrderListFilter.paid, label: Text('Đã trả')),
+        ],
+        selected: {filter},
+        onSelectionChanged: (value) => ref
+            .read(orderListControllerProvider.notifier)
+            .setFilter(value.single),
+      ),
+    );
+  }
+}
+
+class _OrderResults extends ConsumerWidget {
+  const _OrderResults();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final orders = ref.watch(orderListControllerProvider);
+    final filter = ref.watch(orderListFilterProvider);
+    return orders.when(
+      loading: () => const SliverFillRemaining(
+        child: AppLoadingState(label: 'Đang tải đơn hàng'),
+      ),
+      error: (error, _) => SliverFillRemaining(
+        child: AppAsyncError(
+          message: 'Không thể tải danh sách đơn hàng.',
+          onRetry: ref.read(orderListControllerProvider.notifier).refresh,
+        ),
+      ),
+      data: (items) => items.isEmpty
+          ? SliverFillRemaining(
+              hasScrollBody: false,
+              child: AppEmptyState(
+                icon: Icons.receipt_long_outlined,
+                title: filter == OrderListFilter.all
+                    ? 'Chưa có đơn hàng'
+                    : 'Chưa có đơn phù hợp',
+                message: filter == OrderListFilter.all
+                    ? 'Đơn đã lưu sẽ xuất hiện tại đây.'
+                    : 'Thử chọn trạng thái khác để xem đơn.',
+              ),
+            )
+          : SliverPadding(
+              padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
+              sliver: SliverList.separated(
+                itemCount: items.length,
+                separatorBuilder: (_, _) => const SizedBox(height: 12),
+                itemBuilder: (context, index) =>
+                    _OrderCard(order: items[index]),
+              ),
+            ),
     );
   }
 }

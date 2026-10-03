@@ -15,6 +15,7 @@ import '../features/settings/backup_screen.dart';
 import '../features/settings/settings_screen.dart';
 import '../features/settings/shop_settings_screen.dart';
 import 'theme.dart';
+import 'design_system.dart';
 
 const _destinations = [
   (path: '/sales', label: 'Bán hàng', icon: Icons.point_of_sale_outlined),
@@ -28,80 +29,33 @@ final routerProvider = Provider<GoRouter>((ref) {
   final router = GoRouter(
     initialLocation: '/sales',
     routes: [
-      ShellRoute(
-        builder: (context, state, child) {
-          final selectedIndex = _destinations.indexWhere(
-            (destination) => destination.path == state.uri.path,
-          );
-          return Scaffold(
-            appBar: AppBar(
-              title: Row(
-                children: [
-                  DecoratedBox(
-                    decoration: BoxDecoration(
-                      color: AppColors.primarySoft,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const SizedBox.square(
-                      dimension: 44,
-                      child: Icon(
-                        Icons.receipt_long_outlined,
-                        size: 24,
-                        color: AppColors.primary,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Text(
-                    selectedIndex < 0
-                        ? 'Đakao In Bill'
-                        : _destinations[selectedIndex].label,
-                  ),
-                ],
-              ),
-            ),
-            body: child,
-            bottomNavigationBar: DecoratedBox(
-              decoration: const BoxDecoration(
-                border: Border(top: BorderSide(color: AppColors.outline)),
-              ),
-              child: NavigationBar(
-                selectedIndex: selectedIndex < 0 ? 0 : selectedIndex,
-                onDestinationSelected: (index) {
-                  context.go(_destinations[index].path);
-                },
-                destinations: [
-                  for (final destination in _destinations)
-                    NavigationDestination(
-                      icon: Icon(destination.icon),
-                      selectedIcon: Icon(destination.icon),
-                      label: destination.label,
-                    ),
-                ],
-              ),
-            ),
-          );
-        },
-        routes: [
+      StatefulShellRoute.indexedStack(
+        builder: (context, state, navigationShell) =>
+            _AppShell(navigationShell: navigationShell),
+        branches: [
           for (final destination in _destinations)
-            GoRoute(
-              path: destination.path,
-              pageBuilder: (context, state) => NoTransitionPage<void>(
-                key: state.pageKey,
-                child: switch (destination.path) {
-                  '/sales' => const SalesScreen(),
-                  '/orders' => const OrdersScreen(),
-                  '/revenue' => const RevenueScreen(),
-                  '/products' => const ProductsScreen(),
-                  '/settings' => const SettingsScreen(),
-                  _ => Center(
-                    child: Text(
-                      destination.label,
-                      key: const Key('destination-title'),
-                    ),
+            StatefulShellBranch(
+              routes: [
+                GoRoute(
+                  path: destination.path,
+                  pageBuilder: (context, state) => NoTransitionPage<void>(
+                    key: ValueKey(destination.path),
+                    child: switch (destination.path) {
+                      '/sales' => const SalesScreen(),
+                      '/orders' => const OrdersScreen(),
+                      '/revenue' => const RevenueScreen(),
+                      '/products' => const ProductsScreen(),
+                      '/settings' => const SettingsScreen(),
+                      _ => Center(
+                        child: Text(
+                          destination.label,
+                          key: const Key('destination-title'),
+                        ),
+                      ),
+                    },
                   ),
-                },
-              ),
+                ),
+              ],
             ),
         ],
       ),
@@ -145,3 +99,60 @@ final routerProvider = Provider<GoRouter>((ref) {
   ref.onDispose(router.dispose);
   return router;
 });
+
+class _AppShell extends StatelessWidget {
+  const _AppShell({required this.navigationShell});
+
+  final StatefulNavigationShell navigationShell;
+
+  @override
+  Widget build(BuildContext context) {
+    final selectedIndex = navigationShell.currentIndex;
+    return Scaffold(
+      appBar: AppBar(
+        title: Row(
+          children: [
+            DecoratedBox(
+              decoration: BoxDecoration(
+                color: AppColors.primarySoft,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const SizedBox.square(
+                dimension: 44,
+                child: Icon(
+                  Icons.receipt_long_outlined,
+                  size: 24,
+                  color: AppColors.primary,
+                ),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Text(_destinations[selectedIndex].label),
+          ],
+        ),
+      ),
+      body: navigationShell,
+      bottomNavigationBar: DecoratedBox(
+        decoration: const BoxDecoration(
+          border: Border(top: BorderSide(color: AppColors.outline)),
+        ),
+        child: NavigationBar(
+          animationDuration: AppMotion.duration(context, AppMotion.navigation),
+          selectedIndex: selectedIndex,
+          onDestinationSelected: (index) => navigationShell.goBranch(
+            index,
+            initialLocation: index == selectedIndex,
+          ),
+          destinations: [
+            for (final destination in _destinations)
+              NavigationDestination(
+                icon: Icon(destination.icon),
+                selectedIcon: Icon(destination.icon),
+                label: destination.label,
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}

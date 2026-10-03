@@ -13,14 +13,26 @@ class ReviewScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final cart = ref.watch(cartControllerProvider);
+    final structure = ref.watch(
+      cartControllerProvider.select(
+        (cart) => (
+          submitting: cart.isSubmitting,
+          lineIds: cart.lines.map((line) => line.lineId).join(','),
+        ),
+      ),
+    );
+    final lineIds = ref
+        .read(cartControllerProvider)
+        .lines
+        .map((line) => line.lineId)
+        .toList(growable: false);
     return PopScope(
-      canPop: !cart.isSubmitting,
+      canPop: !structure.submitting,
       child: Scaffold(
         appBar: AppBar(
           title: const Text('Đơn hiện tại'),
           actions: [
-            if (cart.lines.isNotEmpty && !cart.isSubmitting)
+            if (lineIds.isNotEmpty && !structure.submitting)
               TextButton(
                 onPressed: () => _confirmClear(context, ref),
                 child: const Text('Xóa đơn'),
@@ -29,48 +41,9 @@ class ReviewScreen extends ConsumerWidget {
         ),
         body: Column(
           children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: _TypeButton(
-                      label: 'Tại quán',
-                      icon: Icons.storefront_outlined,
-                      selected: cart.orderType == OrderType.dineIn,
-                      onPressed: cart.isSubmitting
-                          ? null
-                          : () => ref
-                                .read(cartControllerProvider.notifier)
-                                .setOrderType(
-                                  cart.orderType == OrderType.dineIn
-                                      ? null
-                                      : OrderType.dineIn,
-                                ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: _TypeButton(
-                      label: 'Mang về',
-                      icon: Icons.takeout_dining_outlined,
-                      selected: cart.orderType == OrderType.takeaway,
-                      onPressed: cart.isSubmitting
-                          ? null
-                          : () => ref
-                                .read(cartControllerProvider.notifier)
-                                .setOrderType(
-                                  cart.orderType == OrderType.takeaway
-                                      ? null
-                                      : OrderType.takeaway,
-                                ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
+            const _OrderTypeSelector(),
             Expanded(
-              child: cart.lines.isEmpty
+              child: lineIds.isEmpty
                   ? const AppEmptyState(
                       icon: Icons.shopping_bag_outlined,
                       title: 'Đơn hiện tại đang trống',
@@ -78,71 +51,15 @@ class ReviewScreen extends ConsumerWidget {
                     )
                   : ListView.separated(
                       padding: const EdgeInsets.all(16),
-                      itemCount: cart.lines.length,
+                      itemCount: lineIds.length,
                       separatorBuilder: (_, _) => const SizedBox(height: 10),
                       itemBuilder: (context, index) => _CartLineCard(
-                        key: ValueKey(cart.lines[index].lineId),
-                        line: cart.lines[index],
-                        enabled: !cart.isSubmitting,
+                        key: ValueKey(lineIds[index]),
+                        lineId: lineIds[index],
                       ),
                     ),
             ),
-            AppBottomActionSurface(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Row(
-                    children: [
-                      const Text(
-                        'Tổng cộng',
-                        style: TextStyle(
-                          fontSize: 17,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      const Spacer(),
-                      AppAnimatedValue(
-                        value: cart.total,
-                        child: Text(
-                          formatVnd(cart.total),
-                          style: const TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.w700,
-                            color: AppColors.primaryStrong,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 10),
-                  FilledButton.icon(
-                    key: const Key('submit-order'),
-                    onPressed: cart.lines.isEmpty || cart.isSubmitting
-                        ? null
-                        : () => _submit(context, ref),
-                    icon: cart.isSubmitting
-                        ? const SizedBox.square(
-                            dimension: 20,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Colors.white,
-                            ),
-                          )
-                        : const Icon(Icons.print_outlined),
-                    label: Text('In bill • ${formatVnd(cart.total)}'),
-                  ),
-                  const SizedBox(height: 5),
-                  const Text(
-                    'Đơn được lưu trước, sau đó gửi đến máy in đã chọn',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: AppColors.secondaryInk,
-                    ),
-                  ),
-                ],
-              ),
-            ),
+            _ReviewSummary(onSubmit: () => _submit(context, ref)),
           ],
         ),
       ),
@@ -191,8 +108,95 @@ class ReviewScreen extends ConsumerWidget {
   }
 }
 
-class _TypeButton extends StatelessWidget {
-  const _TypeButton({
+class _OrderTypeSelector extends ConsumerWidget {
+  const _OrderTypeSelector();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final state = ref.watch(
+      cartControllerProvider.select(
+        (cart) => (orderType: cart.orderType, submitting: cart.isSubmitting),
+      ),
+    );
+    void select(OrderType type) => ref
+        .read(cartControllerProvider.notifier)
+        .setOrderType(state.orderType == type ? null : type);
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          border: Border.all(color: AppColors.outline),
+          borderRadius: BorderRadius.circular(AppRadii.button),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(3),
+          child: LayoutBuilder(
+            builder: (context, constraints) => SizedBox(
+              height: AppSizes.buttonHeight,
+              child: Stack(
+                children: [
+                  AnimatedOpacity(
+                    opacity: state.orderType == null ? 0 : 1,
+                    duration: AppMotion.duration(context, AppMotion.selection),
+                    child: AnimatedAlign(
+                      alignment: state.orderType == OrderType.takeaway
+                          ? Alignment.centerRight
+                          : Alignment.centerLeft,
+                      duration: AppMotion.duration(
+                        context,
+                        AppMotion.orderType,
+                      ),
+                      curve: AppMotion.curve,
+                      child: SizedBox(
+                        width: constraints.maxWidth / 2,
+                        height: AppSizes.buttonHeight,
+                        child: DecoratedBox(
+                          decoration: BoxDecoration(
+                            color: AppColors.primarySoft,
+                            borderRadius: BorderRadius.circular(AppRadii.field),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _TypeSegment(
+                          label: 'Tại quán',
+                          icon: Icons.storefront_outlined,
+                          selected: state.orderType == OrderType.dineIn,
+                          onPressed: state.submitting
+                              ? null
+                              : () => select(OrderType.dineIn),
+                        ),
+                      ),
+                      Expanded(
+                        child: _TypeSegment(
+                          label: 'Mang về',
+                          icon: Icons.takeout_dining_outlined,
+                          selected: state.orderType == OrderType.takeaway,
+                          onPressed: state.submitting
+                              ? null
+                              : () => select(OrderType.takeaway),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _TypeSegment extends StatelessWidget {
+  const _TypeSegment({
     required this.label,
     required this.icon,
     required this.selected,
@@ -214,49 +218,38 @@ class _TypeButton extends StatelessWidget {
       excludeSemantics: true,
       child: AnimatedOpacity(
         opacity: enabled ? 1 : .48,
-        duration: AppMotion.duration(context, AppMotion.fast),
-        child: AnimatedContainer(
-          duration: AppMotion.duration(context, AppMotion.standard),
-          curve: AppMotion.curve,
-          decoration: BoxDecoration(
-            color: selected ? AppColors.primarySoft : AppColors.surface,
-            border: Border.all(
-              color: selected ? AppColors.primary : AppColors.outline,
-            ),
-            borderRadius: BorderRadius.circular(AppRadii.button),
-          ),
-          child: Material(
-            color: Colors.transparent,
-            child: InkWell(
-              onTap: onPressed,
-              excludeFromSemantics: true,
-              borderRadius: BorderRadius.circular(AppRadii.button),
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(
-                  minHeight: AppSizes.buttonHeight,
+        duration: AppMotion.duration(context, AppMotion.pressRelease),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: onPressed,
+            excludeFromSemantics: true,
+            borderRadius: BorderRadius.circular(AppRadii.field),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                TweenAnimationBuilder<Color?>(
+                  tween: ColorTween(
+                    end: selected
+                        ? AppColors.primaryStrong
+                        : AppColors.secondaryInk,
+                  ),
+                  duration: AppMotion.duration(context, AppMotion.selection),
+                  builder: (context, color, _) => Icon(icon, color: color),
                 ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      icon,
-                      color: selected
-                          ? AppColors.primaryStrong
-                          : AppColors.secondaryInk,
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      label,
-                      style: TextStyle(
-                        color: selected
-                            ? AppColors.primaryStrong
-                            : AppColors.secondaryInk,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ],
+                const SizedBox(width: 8),
+                AnimatedDefaultTextStyle(
+                  duration: AppMotion.duration(context, AppMotion.selection),
+                  curve: AppMotion.curve,
+                  style: TextStyle(
+                    color: selected
+                        ? AppColors.primaryStrong
+                        : AppColors.secondaryInk,
+                    fontWeight: FontWeight.w700,
+                  ),
+                  child: Text(label),
                 ),
-              ),
+              ],
             ),
           ),
         ),
@@ -265,14 +258,76 @@ class _TypeButton extends StatelessWidget {
   }
 }
 
+class _ReviewSummary extends ConsumerWidget {
+  const _ReviewSummary({required this.onSubmit});
+
+  final VoidCallback onSubmit;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final summary = ref.watch(
+      cartControllerProvider.select(
+        (cart) => (
+          total: cart.total,
+          empty: cart.lines.isEmpty,
+          submitting: cart.isSubmitting,
+        ),
+      ),
+    );
+    return AppBottomActionSurface(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            children: [
+              const Text(
+                'Tổng cộng',
+                style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
+              ),
+              const Spacer(),
+              AppAnimatedValue(
+                value: summary.total,
+                child: Text(
+                  formatVnd(summary.total),
+                  style: const TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.primaryStrong,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          FilledButton.icon(
+            key: const Key('submit-order'),
+            onPressed: summary.empty || summary.submitting ? null : onSubmit,
+            icon: summary.submitting
+                ? const SizedBox.square(
+                    dimension: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.white,
+                    ),
+                  )
+                : const Icon(Icons.print_outlined),
+            label: Text('In bill • ${formatVnd(summary.total)}'),
+          ),
+          const SizedBox(height: 5),
+          const Text(
+            'Đơn được lưu trước, sau đó gửi đến máy in đã chọn',
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 11, color: AppColors.secondaryInk),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _CartLineCard extends ConsumerStatefulWidget {
-  const _CartLineCard({
-    required super.key,
-    required this.line,
-    required this.enabled,
-  });
-  final CartLine line;
-  final bool enabled;
+  const _CartLineCard({required super.key, required this.lineId});
+  final int lineId;
 
   @override
   ConsumerState<_CartLineCard> createState() => _CartLineCardState();
@@ -285,17 +340,8 @@ class _CartLineCardState extends ConsumerState<_CartLineCard> {
   @override
   void initState() {
     super.initState();
-    _noteController = TextEditingController(text: widget.line.note);
+    _noteController = TextEditingController();
     _noteFocus = FocusNode();
-  }
-
-  @override
-  void didUpdateWidget(covariant _CartLineCard oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    final external = widget.line.note ?? '';
-    if (!_noteFocus.hasFocus && _noteController.text != external) {
-      _noteController.text = external;
-    }
   }
 
   @override
@@ -306,104 +352,127 @@ class _CartLineCardState extends ConsumerState<_CartLineCard> {
   }
 
   @override
-  Widget build(BuildContext context) => Card(
-    child: Padding(
-      padding: const EdgeInsets.all(12),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      widget.line.productName,
-                      style: const TextStyle(fontWeight: FontWeight.w700),
-                    ),
-                    Text(
-                      '${formatVnd(widget.line.unitPrice)} / phần',
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: AppColors.secondaryInk,
+  Widget build(BuildContext context) {
+    final snapshot = ref.watch(
+      cartControllerProvider.select((cart) {
+        CartLine? line;
+        for (final candidate in cart.lines) {
+          if (candidate.lineId == widget.lineId) {
+            line = candidate;
+            break;
+          }
+        }
+        return (line: line, enabled: !cart.isSubmitting);
+      }),
+    );
+    final line = snapshot.line;
+    if (line == null) return const SizedBox.shrink();
+    final external = line.note ?? '';
+    if (!_noteFocus.hasFocus && _noteController.text != external) {
+      _noteController.value = TextEditingValue(
+        text: external,
+        selection: TextSelection.collapsed(offset: external.length),
+      );
+    }
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        line.productName,
+                        style: const TextStyle(fontWeight: FontWeight.w700),
                       ),
-                    ),
-                  ],
+                      Text(
+                        '${formatVnd(line.unitPrice)} / phần',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: AppColors.secondaryInk,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-              AppAnimatedValue(
-                value: widget.line.lineTotal,
-                child: Text(
-                  formatVnd(widget.line.lineTotal),
-                  style: const TextStyle(fontWeight: FontWeight.w700),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          TextField(
-            key: Key('cart-note-${widget.line.lineId}'),
-            controller: _noteController,
-            focusNode: _noteFocus,
-            enabled: widget.enabled,
-            onChanged: (value) => ref
-                .read(cartControllerProvider.notifier)
-                .setNote(widget.line.lineId, value),
-            decoration: const InputDecoration(
-              hintText: 'Ghi chú cho món',
-              prefixIcon: Icon(Icons.edit_note),
-              isDense: true,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              IconButton(
-                key: Key('remove-cart-line-${widget.line.lineId}'),
-                onPressed: widget.enabled
-                    ? () => ref
-                          .read(cartControllerProvider.notifier)
-                          .remove(widget.line.lineId)
-                    : null,
-                icon: const Icon(Icons.delete_outline),
-                tooltip: 'Bỏ món',
-              ),
-              const Spacer(),
-              IconButton(
-                onPressed: widget.enabled
-                    ? () => ref
-                          .read(cartControllerProvider.notifier)
-                          .decrement(widget.line.lineId)
-                    : null,
-                icon: const Icon(Icons.remove),
-                tooltip: 'Giảm',
-              ),
-              SizedBox(
-                width: 36,
-                child: AppAnimatedValue(
-                  value: widget.line.quantity,
+                AppAnimatedValue(
+                  value: line.lineTotal,
                   child: Text(
-                    '${widget.line.quantity}',
-                    textAlign: TextAlign.center,
+                    formatVnd(line.lineTotal),
                     style: const TextStyle(fontWeight: FontWeight.w700),
                   ),
                 ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              key: Key('cart-note-${line.lineId}'),
+              controller: _noteController,
+              focusNode: _noteFocus,
+              enabled: snapshot.enabled,
+              onChanged: (value) => ref
+                  .read(cartControllerProvider.notifier)
+                  .setNote(line.lineId, value),
+              decoration: const InputDecoration(
+                hintText: 'Ghi chú cho món',
+                prefixIcon: Icon(Icons.edit_note),
+                isDense: true,
               ),
-              IconButton(
-                onPressed: widget.enabled
-                    ? () => ref
-                          .read(cartControllerProvider.notifier)
-                          .increment(widget.line.lineId)
-                    : null,
-                icon: const Icon(Icons.add),
-                tooltip: 'Tăng',
-              ),
-            ],
-          ),
-        ],
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                IconButton(
+                  key: Key('remove-cart-line-${line.lineId}'),
+                  onPressed: snapshot.enabled
+                      ? () => ref
+                            .read(cartControllerProvider.notifier)
+                            .remove(line.lineId)
+                      : null,
+                  icon: const Icon(Icons.delete_outline),
+                  tooltip: 'Bỏ món',
+                ),
+                const Spacer(),
+                IconButton(
+                  onPressed: snapshot.enabled
+                      ? () => ref
+                            .read(cartControllerProvider.notifier)
+                            .decrement(line.lineId)
+                      : null,
+                  icon: const Icon(Icons.remove),
+                  tooltip: 'Giảm',
+                ),
+                SizedBox(
+                  width: 36,
+                  child: AppAnimatedValue(
+                    value: line.quantity,
+                    child: Text(
+                      '${line.quantity}',
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(fontWeight: FontWeight.w700),
+                    ),
+                  ),
+                ),
+                IconButton(
+                  onPressed: snapshot.enabled
+                      ? () => ref
+                            .read(cartControllerProvider.notifier)
+                            .increment(line.lineId)
+                      : null,
+                  icon: const Icon(Icons.add),
+                  tooltip: 'Tăng',
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
-    ),
-  );
+    );
+  }
 }

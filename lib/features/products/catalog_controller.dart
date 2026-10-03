@@ -28,6 +28,17 @@ final categoryControllerProvider =
       CategoryController.new,
     );
 
+final catalogRevisionProvider = NotifierProvider<CatalogRevision, int>(
+  CatalogRevision.new,
+);
+
+final class CatalogRevision extends Notifier<int> {
+  @override
+  int build() => 0;
+
+  void bump() => state++;
+}
+
 final class CatalogState {
   const CatalogState({
     required this.categories,
@@ -64,29 +75,37 @@ final class CatalogController extends AsyncNotifier<CatalogState> {
 
   Future<int> createProduct(ProductDraft draft) async {
     final id = await _repository.createProduct(draft);
+    _notifyCatalogChanged();
     await refresh();
     return id;
   }
 
   Future<void> updateProduct(int id, ProductDraft draft) async {
     await _repository.updateProduct(id, draft);
+    _notifyCatalogChanged();
     await refresh();
   }
 
   Future<void> setAvailability(int id, bool value) async {
     await _repository.setProductAvailability(id, value);
+    _notifyCatalogChanged();
     await refresh();
   }
 
   Future<void> deleteProduct(int id) async {
     await _repository.softDeleteProduct(id);
+    _notifyCatalogChanged();
     await refresh();
   }
 
   Future<void> restoreProduct(int id) async {
     await _repository.restoreProduct(id);
+    _notifyCatalogChanged();
     await refresh();
   }
+
+  void _notifyCatalogChanged() =>
+      ref.read(catalogRevisionProvider.notifier).bump();
 
   Future<void> refresh() async {
     final current = state.value;
@@ -126,23 +145,30 @@ final class CategoryController extends AsyncNotifier<List<CatalogCategory>> {
 
   Future<void> create(String name) async {
     await _repository.createCategory(name);
+    _notifyCatalogChanged();
     await refresh();
   }
 
   Future<void> rename(int id, String name) async {
     await _repository.renameCategory(id, name);
+    _notifyCatalogChanged();
     await refresh();
   }
 
   Future<void> setActive(int id, bool value) async {
     await _repository.setCategoryActive(id, value);
+    _notifyCatalogChanged();
     await refresh();
   }
 
   Future<void> move(int id, int newIndex) async {
     await _repository.moveCategory(id, newIndex);
+    _notifyCatalogChanged();
     await refresh();
   }
+
+  void _notifyCatalogChanged() =>
+      ref.read(catalogRevisionProvider.notifier).bump();
 
   Future<void> refresh() async {
     state = const AsyncLoading<List<CatalogCategory>>();

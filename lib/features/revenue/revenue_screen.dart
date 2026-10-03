@@ -13,9 +13,6 @@ class RevenueScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final selection = ref.watch(revenuePeriodControllerProvider);
-    final period = ref.watch(revenuePeriodProvider);
-    final summary = ref.watch(revenueSummaryProvider);
     return RefreshIndicator(
       onRefresh: () async {
         ref.invalidate(revenuePeriodProvider);
@@ -24,50 +21,47 @@ class RevenueScreen extends ConsumerWidget {
       child: ListView(
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
         children: [
-          Text(
-            _periodTitle(selection.preset),
-            style: Theme.of(context).textTheme.headlineSmall,
-          ),
-          const SizedBox(height: 4),
-          Text(
-            _periodLabel(period),
-            style: const TextStyle(color: AppColors.secondaryInk),
-          ),
+          const _RevenueHeader(),
           const SizedBox(height: 12),
-          _PeriodSelector(selection: selection),
+          const _PeriodSelector(),
           const SizedBox(height: 16),
-          summary.when(
-            loading: () => const SizedBox(
-              height: 320,
-              child: AppLoadingState(label: 'Đang tính doanh thu'),
-            ),
-            error: (error, _) => AppAsyncError(
-              message: 'Không thể đọc báo cáo doanh thu.',
-              onRetry: () => ref.invalidate(revenueSummaryProvider),
-            ),
-            data: (value) => AnimatedSwitcher(
-              duration: AppMotion.duration(context, AppMotion.standard),
-              child: _RevenueContent(
-                key: ValueKey(
-                  '${period.startEpochMillis}-${period.endExclusiveEpochMillis}',
-                ),
-                summary: value,
-              ),
-            ),
-          ),
+          const _RevenueSummary(),
         ],
       ),
     );
   }
 }
 
-class _PeriodSelector extends ConsumerWidget {
-  const _PeriodSelector({required this.selection});
-
-  final RevenuePeriodSelection selection;
+class _RevenueHeader extends ConsumerWidget {
+  const _RevenueHeader();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final selection = ref.watch(revenuePeriodControllerProvider);
+    final period = ref.watch(revenuePeriodProvider);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          _periodTitle(selection.preset),
+          style: Theme.of(context).textTheme.headlineSmall,
+        ),
+        const SizedBox(height: 4),
+        Text(
+          _periodLabel(period),
+          style: const TextStyle(color: AppColors.secondaryInk),
+        ),
+      ],
+    );
+  }
+}
+
+class _PeriodSelector extends ConsumerWidget {
+  const _PeriodSelector();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final selection = ref.watch(revenuePeriodControllerProvider);
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       child: Row(
@@ -92,6 +86,7 @@ class _PeriodSelector extends ConsumerWidget {
               onSelected: (_) => ref
                   .read(revenuePeriodControllerProvider.notifier)
                   .selectPreset(preset),
+              chipAnimationStyle: AppMotion.chipStyle(context),
             ),
             if (preset != RevenuePeriodPreset.month) const SizedBox(width: 8),
           ],
@@ -101,8 +96,28 @@ class _PeriodSelector extends ConsumerWidget {
   }
 }
 
+class _RevenueSummary extends ConsumerWidget {
+  const _RevenueSummary();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final summary = ref.watch(revenueSummaryProvider);
+    return summary.when(
+      loading: () => const SizedBox(
+        height: 320,
+        child: AppLoadingState(label: 'Đang tính doanh thu'),
+      ),
+      error: (error, _) => AppAsyncError(
+        message: 'Không thể đọc báo cáo doanh thu.',
+        onRetry: () => ref.invalidate(revenueSummaryProvider),
+      ),
+      data: (value) => _RevenueContent(summary: value),
+    );
+  }
+}
+
 class _RevenueContent extends StatelessWidget {
-  const _RevenueContent({required this.summary, super.key});
+  const _RevenueContent({required this.summary});
 
   final RevenueSummary summary;
 

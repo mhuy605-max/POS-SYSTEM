@@ -29,15 +29,34 @@ abstract final class AppSizes {
 }
 
 abstract final class AppMotion {
-  static const fast = Duration(milliseconds: 120);
-  static const standard = Duration(milliseconds: 180);
-  static const spatial = Duration(milliseconds: 220);
+  static const pressDown = Duration(milliseconds: 80);
+  static const pressRelease = Duration(milliseconds: 120);
+  static const selection = Duration(milliseconds: 160);
+  static const number = Duration(milliseconds: 160);
+  static const orderType = Duration(milliseconds: 180);
+  static const navigation = Duration(milliseconds: 200);
+  static const dialog = Duration(milliseconds: 190);
+  static const contentEntrance = Duration(milliseconds: 200);
+  static const startup = Duration(milliseconds: 200);
+  static const fast = pressRelease;
+  static const standard = selection;
+  static const spatial = contentEntrance;
   static const curve = Curves.easeOutCubic;
 
   static Duration duration(BuildContext context, Duration preferred) =>
       MediaQuery.maybeOf(context)?.disableAnimations == true
       ? Duration.zero
       : preferred;
+
+  static ChipAnimationStyle chipStyle(BuildContext context) {
+    final selectionDuration = duration(context, selection);
+    return ChipAnimationStyle(
+      selectAnimation: AnimationStyle(
+        duration: selectionDuration,
+        reverseDuration: selectionDuration,
+      ),
+    );
+  }
 }
 
 enum AppStatusTone { brand, success, warning, error, neutral, information }
@@ -189,17 +208,25 @@ class AppAnimatedValue extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => AnimatedSwitcher(
-    duration: AppMotion.duration(context, AppMotion.standard),
+    duration: AppMotion.duration(context, AppMotion.number),
     switchInCurve: AppMotion.curve,
     switchOutCurve: Curves.easeIn,
+    layoutBuilder: (currentChild, previousChildren) => Stack(
+      alignment: Alignment.center,
+      children: [
+        if (previousChildren.isNotEmpty) previousChildren.last,
+        ?currentChild,
+      ],
+    ),
     transitionBuilder: (child, animation) => FadeTransition(
       opacity: animation,
-      child: SlideTransition(
-        position: Tween<Offset>(
-          begin: const Offset(0, .08),
-          end: Offset.zero,
-        ).animate(animation),
+      child: AnimatedBuilder(
+        animation: animation,
         child: child,
+        builder: (context, child) => Transform.translate(
+          offset: Offset(0, 5 * (1 - animation.value)),
+          child: child,
+        ),
       ),
     ),
     child: KeyedSubtree(key: ValueKey(value), child: child),
@@ -251,7 +278,10 @@ class _AppPressableState extends State<AppPressable> {
   @override
   Widget build(BuildContext context) => AnimatedScale(
     scale: _pressed ? .985 : 1,
-    duration: AppMotion.duration(context, AppMotion.fast),
+    duration: AppMotion.duration(
+      context,
+      _pressed ? AppMotion.pressDown : AppMotion.pressRelease,
+    ),
     curve: AppMotion.curve,
     child: Material(
       color: Colors.transparent,

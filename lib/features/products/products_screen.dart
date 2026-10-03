@@ -207,6 +207,7 @@ class _FilterChip extends StatelessWidget {
         borderRadius: BorderRadius.circular(AppRadii.field),
       ),
       padding: const EdgeInsets.symmetric(horizontal: 8),
+      chipAnimationStyle: AppMotion.chipStyle(context),
     );
   }
 }
