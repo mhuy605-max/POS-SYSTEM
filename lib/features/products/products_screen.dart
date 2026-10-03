@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../app/design_system.dart';
 import '../../app/theme.dart';
 import '../../core/money.dart';
 import 'catalog_controller.dart';
@@ -37,9 +38,10 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
   Widget build(BuildContext context) {
     final catalog = ref.watch(catalogControllerProvider);
     return catalog.when(
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (error, stack) => _CatalogError(
-        onRetry: ref.read(catalogControllerProvider.notifier).refresh,
+      loading: () => const AppLoadingState(label: 'Đang tải danh sách món'),
+      error: (error, stack) => AppAsyncError(
+        message: 'Không thể tải danh sách món.',
+        onRetry: () => ref.read(catalogControllerProvider.notifier).refresh(),
       ),
       data: (state) => Column(
         children: [
@@ -71,9 +73,14 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
                     ),
                   ),
                   if (state.products.isEmpty)
-                    const SliverFillRemaining(
+                    SliverFillRemaining(
                       hasScrollBody: false,
-                      child: _EmptyCatalog(),
+                      child: _EmptyCatalog(
+                        filtered:
+                            state.search.trim().isNotEmpty ||
+                            state.categoryId != null,
+                        onAdd: () => context.push('/products/add'),
+                      ),
                     )
                   else
                     SliverPadding(
@@ -90,7 +97,8 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
               ),
             ),
           ),
-          _AddProductAction(onPressed: () => context.push('/products/add')),
+          if (state.products.isNotEmpty)
+            _AddProductAction(onPressed: () => context.push('/products/add')),
         ],
       ),
     );
@@ -107,40 +115,13 @@ class _CatalogHeader extends StatelessWidget {
     return Row(
       children: [
         Expanded(
-          child: Wrap(
-            crossAxisAlignment: WrapCrossAlignment.center,
-            spacing: 8,
-            children: [
-              Text(
-                'Quản lý món',
-                style: Theme.of(context).textTheme.headlineSmall
-                    ?.copyWith(fontWeight: FontWeight.w800),
-              ),
-              DecoratedBox(
-                decoration: BoxDecoration(
-                  color: const Color(0xFFFFDBCE),
-                  borderRadius: BorderRadius.circular(999),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 5,
-                  ),
-                  child: Text(
-                    '$count món',
-                    style: const TextStyle(
-                      color: AppColors.primary,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                ),
-              ),
-            ],
+          child: Text(
+            '$count món trong danh mục',
+            style: Theme.of(context).textTheme.bodySmall,
           ),
         ),
         const SizedBox(width: 8),
-        FilledButton.tonalIcon(
+        OutlinedButton.icon(
           key: const Key('manage-categories'),
           onPressed: () async {
             await context.push('/products/categories');
@@ -152,11 +133,9 @@ class _CatalogHeader extends StatelessWidget {
           },
           icon: const Icon(Icons.category_outlined, size: 20),
           label: const Text('Danh mục'),
-          style: FilledButton.styleFrom(
+          style: OutlinedButton.styleFrom(
             minimumSize: const Size(48, 48),
             padding: const EdgeInsets.symmetric(horizontal: 12),
-            backgroundColor: AppColors.surfaceHigh,
-            foregroundColor: AppColors.ink,
           ),
         ),
       ],
@@ -218,14 +197,17 @@ class _FilterChip extends StatelessWidget {
       onSelected: (_) => onSelected(),
       showCheckmark: false,
       labelStyle: TextStyle(
-        color: selected ? Colors.white : AppColors.secondaryInk,
+        color: selected ? AppColors.primaryStrong : AppColors.secondaryInk,
         fontWeight: FontWeight.w700,
       ),
-      selectedColor: AppColors.ink,
-      backgroundColor: AppColors.surfaceHigh,
-      side: BorderSide.none,
-      shape: const StadiumBorder(),
+      selectedColor: AppColors.primarySoft,
+      backgroundColor: AppColors.surface,
+      side: BorderSide(color: selected ? AppColors.primary : AppColors.outline),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppRadii.field),
+      ),
       padding: const EdgeInsets.symmetric(horizontal: 8),
+      chipAnimationStyle: AppMotion.chipStyle(context),
     );
   }
 }
@@ -329,7 +311,6 @@ class _ProductCard extends ConsumerWidget {
                     Switch(
                       key: Key('availability-${product.id}'),
                       value: product.isAvailable,
-                      activeTrackColor: AppColors.success,
                       onChanged: (value) => ref
                           .read(catalogControllerProvider.notifier)
                           .setAvailability(product.id, value),
@@ -377,7 +358,7 @@ class _ProductImage extends StatelessWidget {
           child: validFile
               ? Image.file(file!, fit: BoxFit.cover)
               : const ColoredBox(
-                  color: Color(0xFFE1E8FD),
+                  color: AppColors.surfaceLow,
                   child: Icon(
                     Icons.restaurant_rounded,
                     color: AppColors.primary,
@@ -397,28 +378,14 @@ class _AddProductAction extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: const BoxDecoration(
-        color: AppColors.canvas,
-        boxShadow: [
-          BoxShadow(
-            color: Color(0x12000000),
-            blurRadius: 16,
-            offset: Offset(0, -4),
-          ),
-        ],
-      ),
-      child: SafeArea(
-        top: false,
-        minimum: const EdgeInsets.fromLTRB(16, 10, 16, 10),
-        child: SizedBox(
-          width: double.infinity,
-          child: FilledButton.icon(
-            key: const Key('add-product'),
-            onPressed: onPressed,
-            icon: const Icon(Icons.add_circle_outline),
-            label: const Text('Thêm món mới'),
-          ),
+    return AppBottomActionSurface(
+      child: SizedBox(
+        width: double.infinity,
+        child: FilledButton.icon(
+          key: const Key('add-product'),
+          onPressed: onPressed,
+          icon: const Icon(Icons.add_circle_outline),
+          label: const Text('Thêm món mới'),
         ),
       ),
     );
@@ -426,36 +393,21 @@ class _AddProductAction extends StatelessWidget {
 }
 
 class _EmptyCatalog extends StatelessWidget {
-  const _EmptyCatalog();
+  const _EmptyCatalog({required this.filtered, required this.onAdd});
+  final bool filtered;
+  final VoidCallback onAdd;
 
   @override
   Widget build(BuildContext context) {
-    return const Center(
-      child: Padding(
-        padding: EdgeInsets.all(32),
-        child: Text(
-          'Chưa có món phù hợp.',
-          textAlign: TextAlign.center,
-          style: TextStyle(color: AppColors.secondaryInk),
-        ),
-      ),
-    );
-  }
-}
-
-class _CatalogError extends StatelessWidget {
-  const _CatalogError({required this.onRetry});
-
-  final Future<void> Function() onRetry;
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: FilledButton.tonalIcon(
-        onPressed: onRetry,
-        icon: const Icon(Icons.refresh),
-        label: const Text('Thử lại'),
-      ),
+    return AppEmptyState(
+      icon: filtered ? Icons.search_off_outlined : Icons.restaurant_outlined,
+      title: filtered ? 'Không tìm thấy món' : 'Chưa có món nào',
+      message: filtered
+          ? 'Thử từ khóa hoặc danh mục khác.'
+          : 'Thêm món đầu tiên để bắt đầu bán hàng.',
+      actionLabel: filtered ? null : 'Thêm món đầu tiên',
+      onAction: filtered ? null : onAdd,
+      actionKey: filtered ? null : const Key('add-product'),
     );
   }
 }

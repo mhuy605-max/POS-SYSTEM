@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/money.dart';
+import '../../app/design_system.dart';
 import '../../app/theme.dart';
 import '../orders/order_providers.dart';
 import '../orders/order_repository.dart';
@@ -16,6 +17,7 @@ import 'cart_controller.dart';
 final salesCatalogProvider = FutureProvider.autoDispose<CatalogState>((
   ref,
 ) async {
+  ref.watch(catalogRevisionProvider);
   final repository = ref.watch(productRepositoryProvider);
   final categories = await repository.listCategories();
   final products = await repository.listProducts();
@@ -36,14 +38,15 @@ class _SalesScreenState extends ConsumerState<SalesScreen> {
   @override
   Widget build(BuildContext context) {
     final catalog = ref.watch(salesCatalogProvider);
-    final cart = ref.watch(cartControllerProvider);
     return Column(
       children: [
         Expanded(
           child: catalog.when(
-            loading: () => const Center(child: CircularProgressIndicator()),
-            error: (error, _) =>
-                Center(child: Text('Không thể tải món: $error')),
+            loading: () => const AppLoadingState(label: 'Đang tải thực đơn'),
+            error: (error, _) => AppAsyncError(
+              message: 'Không thể tải thực đơn. Hãy thử lại.',
+              onRetry: () => ref.invalidate(salesCatalogProvider),
+            ),
             data: (data) {
               final activeCategoryIds = data.categories
                   .where((category) => category.isActive)
@@ -110,9 +113,17 @@ class _SalesScreenState extends ConsumerState<SalesScreen> {
                     ),
                   ),
                   if (visibleProducts.isEmpty)
-                    const SliverFillRemaining(
+                    SliverFillRemaining(
                       hasScrollBody: false,
-                      child: Center(child: Text('Chưa có món phù hợp.')),
+                      child: AppEmptyState(
+                        icon: Icons.restaurant_menu_outlined,
+                        title: query.isEmpty && effectiveCategoryId == null
+                            ? 'Chưa có món để bán'
+                            : 'Không tìm thấy món',
+                        message: query.isEmpty && effectiveCategoryId == null
+                            ? 'Món đang bán sẽ xuất hiện tại đây.'
+                            : 'Thử từ khóa hoặc danh mục khác.',
+                      ),
                     )
                   else
                     SliverPadding(
@@ -139,47 +150,64 @@ class _SalesScreenState extends ConsumerState<SalesScreen> {
             },
           ),
         ),
-        SafeArea(
-          top: false,
-          child: Material(
-            color: Colors.white,
-            elevation: 8,
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
-              child: FilledButton(
-                key: const Key('open-current-order'),
-                onPressed: () async {
-                  final result = await context.push<OrderSubmissionResult>(
-                    '/sales/current',
-                  );
-                  if (result != null && context.mounted) {
-                    final saved = await ref
-                        .read(orderRepositoryProvider)
-                        .loadOrder(result.orderId);
-                    if (!context.mounted) return;
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(_submissionFeedback(saved, result)),
-                      ),
-                    );
-                  }
-                },
-                child: Row(
-                  children: [
-                    const Icon(Icons.shopping_bag_outlined),
-                    const SizedBox(width: 8),
-                    Text('${cart.itemCount} món'),
-                    const Spacer(),
-                    Text(formatVnd(cart.total)),
-                    const SizedBox(width: 6),
-                    const Icon(Icons.chevron_right),
-                  ],
-                ),
+        const _SalesCartBar(),
+      ],
+    );
+  }
+}
+
+class _SalesCartBar extends ConsumerWidget {
+  const _SalesCartBar();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final summary = ref.watch(
+      cartControllerProvider.select(
+        (cart) => (itemCount: cart.itemCount, total: cart.total),
+      ),
+    );
+    return AppBottomActionSurface(
+      child: FilledButton(
+        key: const Key('open-current-order'),
+        onPressed: () async {
+          final result = await context.push<OrderSubmissionResult>(
+            '/sales/current',
+          );
+          if (result != null && context.mounted) {
+            final saved = await ref
+                .read(orderRepositoryProvider)
+                .loadOrder(result.orderId);
+            if (!context.mounted) return;
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(_submissionFeedback(saved, result))),
+            );
+          }
+        },
+        style: FilledButton.styleFrom(
+          backgroundColor: AppColors.primary,
+          foregroundColor: Colors.white,
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.shopping_bag_outlined),
+            const SizedBox(width: 8),
+            AppAnimatedValue(
+              value: summary.itemCount,
+              child: Text('${summary.itemCount} món'),
+            ),
+            const Spacer(),
+            AppAnimatedValue(
+              value: summary.total,
+              child: Text(
+                formatVnd(summary.total),
+                style: const TextStyle(fontWeight: FontWeight.w700),
               ),
             ),
-          ),
+            const SizedBox(width: 6),
+            const Icon(Icons.chevron_right),
+          ],
         ),
-      ],
+      ),
     );
   }
 }
@@ -214,6 +242,13 @@ class _CategoryChip extends StatelessWidget {
     selected: selected,
     onSelected: (_) => onTap(),
     showCheckmark: false,
+    selectedColor: AppColors.primarySoft,
+    side: BorderSide(color: selected ? AppColors.primary : AppColors.outline),
+    labelStyle: TextStyle(
+      color: selected ? AppColors.primaryStrong : AppColors.secondaryInk,
+      fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
+    ),
+    chipAnimationStyle: AppMotion.chipStyle(context),
   );
 }
 
@@ -227,7 +262,7 @@ class _SaleProductCard extends ConsumerWidget {
     final available = product.isAvailable;
     return Card(
       clipBehavior: Clip.antiAlias,
-      child: InkWell(
+      child: AppPressable(
         key: Key('sale-product-${product.id}'),
         onTap: available ? onTap : null,
         child: Opacity(

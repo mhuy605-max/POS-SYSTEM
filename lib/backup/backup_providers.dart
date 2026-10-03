@@ -111,6 +111,7 @@ final class BackupController extends AsyncNotifier<BackupUiState> {
     ref.invalidate(cartControllerProvider);
     ref.invalidate(catalogControllerProvider);
     ref.invalidate(categoryControllerProvider);
+    ref.read(catalogRevisionProvider.notifier).bump();
     ref.invalidate(orderListControllerProvider);
     ref.invalidate(revenueSummaryProvider);
     ref.invalidate(shopSettingsProvider);

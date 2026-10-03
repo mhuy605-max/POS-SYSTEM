@@ -40,11 +40,11 @@ void main() {
         case 'Bán hàng':
           expect(find.byKey(const Key('sales-search')), findsOneWidget);
         case 'Đơn hàng':
-          expect(find.text('Danh sách đơn hàng'), findsOneWidget);
+          expect(find.byKey(const Key('orders-filter')), findsOneWidget);
         case 'Doanh thu':
           expect(find.byKey(const Key('recognized-revenue')), findsOneWidget);
         case 'Món':
-          expect(find.text('Quản lý món'), findsOneWidget);
+          expect(find.byKey(const Key('catalog-search')), findsOneWidget);
         case 'Cài đặt':
           expect(
             find.byKey(const Key('open-printer-settings')),
@@ -60,5 +60,43 @@ void main() {
       }
       expect(tester.takeException(), isNull);
     }
+    await tester.pumpWidget(const SizedBox());
+    await tester.pump(const Duration(milliseconds: 1));
+  });
+
+  testWidgets('root navigation preserves sales search state', (tester) async {
+    final database = AppDatabase(NativeDatabase.memory());
+    addTearDown(database.close);
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [appDatabaseProvider.overrideWithValue(database)],
+        child: const DakaoInBillApp(),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final search = find.byKey(const Key('sales-search'));
+    await tester.enterText(search, 'cơm tấm');
+    await tester.tap(
+      find.descendant(
+        of: find.byType(NavigationBar),
+        matching: find.text('Đơn hàng'),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.descendant(
+        of: find.byType(NavigationBar),
+        matching: find.text('Bán hàng'),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final editable = tester.widget<EditableText>(
+      find.descendant(of: search, matching: find.byType(EditableText)),
+    );
+    expect(editable.controller.text, 'cơm tấm');
+    await tester.pumpWidget(const SizedBox());
+    await tester.pump(const Duration(milliseconds: 1));
   });
 }

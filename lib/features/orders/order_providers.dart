@@ -21,6 +21,18 @@ final orderServiceProvider = Provider<OrderService>((ref) {
 
 enum OrderListFilter { all, unpaid, paid }
 
+final orderListFilterProvider =
+    NotifierProvider<OrderListFilterController, OrderListFilter>(
+      OrderListFilterController.new,
+    );
+
+final class OrderListFilterController extends Notifier<OrderListFilter> {
+  @override
+  OrderListFilter build() => OrderListFilter.all;
+
+  void select(OrderListFilter value) => state = value;
+}
+
 final orderListControllerProvider =
     AsyncNotifierProvider<OrderListController, List<SavedOrder>>(
       OrderListController.new,
@@ -31,19 +43,18 @@ final orderDetailsProvider = FutureProvider.family<SavedOrder, int>((ref, id) {
 });
 
 final class OrderListController extends AsyncNotifier<List<SavedOrder>> {
-  OrderListFilter filter = OrderListFilter.all;
+  OrderListFilter get filter => ref.read(orderListFilterProvider);
 
   @override
-  Future<List<SavedOrder>> build() => _load();
+  Future<List<SavedOrder>> build() => _load(ref.watch(orderListFilterProvider));
 
-  Future<void> setFilter(OrderListFilter value) async {
-    filter = value;
-    await refresh();
+  void setFilter(OrderListFilter value) {
+    ref.read(orderListFilterProvider.notifier).select(value);
   }
 
   Future<void> refresh() async {
     state = const AsyncLoading();
-    state = await AsyncValue.guard(_load);
+    state = await AsyncValue.guard(() => _load(filter));
   }
 
   Future<SavedOrder> markPaid(int id) async {
@@ -62,7 +73,7 @@ final class OrderListController extends AsyncNotifier<List<SavedOrder>> {
     return result;
   }
 
-  Future<List<SavedOrder>> _load() {
+  Future<List<SavedOrder>> _load(OrderListFilter filter) {
     final status = switch (filter) {
       OrderListFilter.all => null,
       OrderListFilter.unpaid => OrderStatus.unpaid,

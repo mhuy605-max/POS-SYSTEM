@@ -15,12 +15,6 @@ class SettingsScreen extends ConsumerWidget {
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        Text(
-          'Thiết bị & ứng dụng',
-          style: Theme.of(context).textTheme.headlineSmall
-              ?.copyWith(fontWeight: FontWeight.w800),
-        ),
-        const SizedBox(height: 16),
         _SettingsEntry(
           key: const Key('open-shop-settings'),
           icon: Icons.storefront_outlined,
@@ -38,11 +32,7 @@ class SettingsScreen extends ConsumerWidget {
               padding: const EdgeInsets.all(16),
               child: Row(
                 children: [
-                  const Icon(
-                    Icons.print_outlined,
-                    color: AppColors.primary,
-                    size: 30,
-                  ),
+                  const _SettingsIcon(icon: Icons.print_outlined),
                   const SizedBox(width: 14),
                   Expanded(
                     child: Column(
@@ -50,7 +40,7 @@ class SettingsScreen extends ConsumerWidget {
                       children: [
                         const Text(
                           'Máy in Bluetooth 58mm',
-                          style: TextStyle(fontWeight: FontWeight.w800),
+                          style: TextStyle(fontWeight: FontWeight.w700),
                         ),
                         Text(
                           printer.when(
@@ -120,7 +110,7 @@ class _SettingsEntry extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         child: Row(
           children: [
-            Icon(icon, color: AppColors.primary, size: 30),
+            _SettingsIcon(icon: icon),
             const SizedBox(width: 14),
             Expanded(
               child: Column(
@@ -128,7 +118,7 @@ class _SettingsEntry extends StatelessWidget {
                 children: [
                   Text(
                     title,
-                    style: const TextStyle(fontWeight: FontWeight.w800),
+                    style: const TextStyle(fontWeight: FontWeight.w700),
                   ),
                   Text(
                     subtitle,
@@ -141,6 +131,23 @@ class _SettingsEntry extends StatelessWidget {
           ],
         ),
       ),
+    ),
+  );
+}
+
+class _SettingsIcon extends StatelessWidget {
+  const _SettingsIcon({required this.icon});
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) => DecoratedBox(
+    decoration: BoxDecoration(
+      color: AppColors.primarySoft,
+      borderRadius: BorderRadius.circular(12),
+    ),
+    child: SizedBox.square(
+      dimension: 44,
+      child: Icon(icon, color: AppColors.primary, size: 23),
     ),
   );
 }

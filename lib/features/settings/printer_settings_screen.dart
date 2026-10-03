@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../app/design_system.dart';
 import '../../app/theme.dart';
 import '../printing/printer_models.dart';
 import '../printing/printer_settings_controller.dart';
@@ -25,9 +26,13 @@ class PrinterSettingsScreen extends ConsumerWidget {
         ],
       ),
       body: state.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, _) =>
-            Center(child: Text('Không thể đọc máy in: $error')),
+        loading: () =>
+            const AppLoadingState(label: 'Đang đọc trạng thái máy in'),
+        error: (error, _) => AppAsyncError(
+          message: 'Không thể đọc trạng thái máy in.',
+          onRetry: () =>
+              ref.read(printerSettingsControllerProvider.notifier).refresh(),
+        ),
         data: (value) => _PrinterSettingsBody(state: value),
       ),
     );
@@ -53,7 +58,7 @@ class _PrinterSettingsBody extends ConsumerWidget {
                 Text(
                   _statusLabel(state.status.state),
                   style: TextStyle(
-                    fontWeight: FontWeight.w800,
+                    fontWeight: FontWeight.w700,
                     color: state.status.state == PrinterAdapterState.connected
                         ? AppColors.success
                         : AppColors.secondaryInk,
@@ -87,7 +92,7 @@ class _PrinterSettingsBody extends ConsumerWidget {
         const SizedBox(height: 16),
         const Text(
           'Thiết bị đã ghép đôi',
-          style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800),
+          style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
         ),
         const SizedBox(height: 8),
         if (state.devices.isEmpty)

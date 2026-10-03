@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:dakao_in_bill/app/app.dart';
 import 'package:dakao_in_bill/backup/backup_file_gateway.dart';
 import 'package:dakao_in_bill/backup/backup_providers.dart';
 import 'package:dakao_in_bill/backup/backup_service.dart';
@@ -10,6 +11,7 @@ import 'package:dakao_in_bill/data/app_database.dart';
 import 'package:dakao_in_bill/data/database_provider.dart';
 import 'package:dakao_in_bill/features/products/catalog_controller.dart';
 import 'package:dakao_in_bill/features/products/product_image_store.dart';
+import 'package:dakao_in_bill/features/products/product_repository.dart';
 import 'package:dakao_in_bill/features/sales/cart_controller.dart';
 import 'package:dakao_in_bill/features/settings/backup_screen.dart';
 import 'package:drift/drift.dart' show Value;
@@ -127,6 +129,52 @@ void main() {
       );
     },
   );
+
+  testWidgets('restore refreshes the retained sales catalog', (tester) async {
+    final repository = ProductRepository(database, () => 1000);
+    final categoryId = await repository.createCategory('Cà phê');
+    final oldProductId = await repository.createProduct(
+      ProductDraft(categoryId: categoryId, name: 'Món cũ', price: 20000),
+    );
+    final staged = await BackupService(
+      database: database,
+      imageStore: ProductImageStore(root),
+      nowUtc: () => DateTime.utc(2026, 10, 3),
+      appVersion: '0.1.0+1',
+    ).createArchive();
+    gateway.picked = PickedBackup(name: 'menu.dakbackup', bytes: staged.bytes);
+    late int restoredProductId;
+    restorer.onReplace = (_) async {
+      await repository.softDeleteProduct(oldProductId);
+      restoredProductId = await repository.createProduct(
+        ProductDraft(
+          categoryId: categoryId,
+          name: 'Món đã khôi phục',
+          price: 30000,
+        ),
+      );
+    };
+    await _pumpApp(tester, database, root, gateway, restorer);
+    expect(find.byKey(Key('sale-product-$oldProductId')), findsOneWidget);
+
+    await tester.tap(find.text('Cài đặt'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Sao lưu & khôi phục'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('pick-backup')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('restore-backup')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('confirm-restore')));
+    await tester.pumpAndSettle();
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Bán hàng'));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(Key('sale-product-$oldProductId')), findsNothing);
+    expect(find.byKey(Key('sale-product-$restoredProductId')), findsOneWidget);
+  });
 }
 
 Future<void> _pump(
@@ -156,12 +204,41 @@ Future<void> _pump(
   await tester.pumpAndSettle();
 }
 
+Future<void> _pumpApp(
+  WidgetTester tester,
+  AppDatabase database,
+  Directory root,
+  BackupFileGateway gateway,
+  BackupRestorer restorer,
+) async {
+  tester.view.physicalSize = const Size(390, 1100);
+  tester.view.devicePixelRatio = 1;
+  addTearDown(tester.view.resetPhysicalSize);
+  addTearDown(tester.view.resetDevicePixelRatio);
+  await tester.pumpWidget(
+    ProviderScope(
+      overrides: [
+        appDatabaseProvider.overrideWithValue(database),
+        productImageStoreProvider.overrideWith(
+          (ref) async => ProductImageStore(root),
+        ),
+        backupFileGatewayProvider.overrideWithValue(gateway),
+        restoreServiceProvider.overrideWithValue(restorer),
+      ],
+      child: const DakaoInBillApp(),
+    ),
+  );
+  await tester.pumpAndSettle();
+}
+
 final class FakeBackupRestorer implements BackupRestorer {
   int calls = 0;
+  Future<void> Function(ValidatedBackup backup)? onReplace;
 
   @override
   Future<void> replaceWith(ValidatedBackup backup) async {
     calls++;
+    await onReplace?.call(backup);
   }
 }
 
