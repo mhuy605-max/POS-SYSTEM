@@ -1,0 +1,238 @@
+<!DOCTYPE html><html lang="vi"><head><meta charset="utf-8"><meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" name="viewport"><meta content="mobile_stack" name="shell-type"><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"><link href="https://fonts.googleapis.com" rel="preconnect"><link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"><link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"><style>@layer base{html,body{width:100vw;margin:0;padding:0;}body{overscroll-behavior:none;}.pb-safe{padding-bottom:env(safe-area-inset-bottom,0px);}.pt-safe{padding-top:env(safe-area-inset-top,0px);}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config = { darkMode: "class", theme: { extend: { "colors": { "surface-container": "#e9edff", "error": "#ba1a1a", "outline": "#8e7166", "on-secondary-fixed-variant": "#005320", "on-tertiary-fixed": "#2f1500", "on-error-container": "#93000a", "on-primary-container": "#fffbff", "on-secondary-fixed": "#002109", "on-secondary": "#ffffff", "surface": "#f9f9ff", "tertiary-fixed": "#ffdcc3", "on-tertiary": "#ffffff", "on-primary": "#ffffff", "inverse-primary": "#ffb599", "on-tertiary-fixed-variant": "#6e3900", "on-error": "#ffffff", "inverse-surface": "#293040", "surface-variant": "#dce2f7", "error-container": "#ffdad6", "surface-container-lowest": "#ffffff", "primary-container": "#cc4900", "inverse-on-surface": "#edf0ff", "secondary": "#006e2d", "secondary-fixed": "#7ffc97", "on-primary-fixed": "#370e00", "tertiary-container": "#b15f00", "outline-variant": "#e2bfb2", "secondary-fixed-dim": "#62df7d", "on-primary-fixed-variant": "#7f2b00", "primary-fixed-dim": "#ffb599", "surface-container-high": "#e1e8fd", "primary-fixed": "#ffdbce", "on-secondary-container": "#007230", "background": "#f9f9ff", "surface-dim": "#d3daef", "tertiary-fixed-dim": "#ffb77d", "tertiary": "#8d4b00", "surface-container-low": "#f1f3ff", "secondary-container": "#7cf994", "on-background": "#141b2b", "surface-bright": "#f9f9ff", "surface-container-highest": "#dce2f7", "surface-tint": "#a73a00", "on-tertiary-container": "#fffbff", "on-surface": "#141b2b", "on-surface-variant": "#5a4138", "primary": "#a33900" }, "borderRadius": { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" }, "spacing": { "margin": "1rem", "space-xs": "0.25rem", "space-lg": "1rem", "space-md": "0.75rem", "gutter": "0.75rem", "space-xl": "1.5rem", "space-sm": "0.5rem" }, "fontFamily": { "price-display": ["Plus Jakarta Sans"], "body-sm": ["Plus Jakarta Sans"], "body-lg": ["Plus Jakarta Sans"], "headline-sm": ["Plus Jakarta Sans"], "label-sm": ["Plus Jakarta Sans"], "label-lg": ["Plus Jakarta Sans"], "headline-md": ["Plus Jakarta Sans"], "headline-lg": ["Plus Jakarta Sans"], "body-md": ["Plus Jakarta Sans"], "label-md": ["Plus Jakarta Sans"], "price-receipt": ["Plus Jakarta Sans"] }, "fontSize": { "price-display": ["24px", {"lineHeight": "30px", "letterSpacing": "-0.03em", "fontWeight": "800"}], "body-sm": ["12px", {"lineHeight": "16px", "fontWeight": "500"}], "body-lg": ["16px", {"lineHeight": "22px", "fontWeight": "600"}], "headline-sm": ["18px", {"lineHeight": "24px", "fontWeight": "700"}], "label-sm": ["11px", {"lineHeight": "14px", "letterSpacing": "0.04em", "fontWeight": "700"}], "label-lg": ["15px", {"lineHeight": "20px", "letterSpacing": "0.01em", "fontWeight": "700"}], "headline-md": ["22px", {"lineHeight": "28px", "letterSpacing": "-0.015em", "fontWeight": "700"}], "headline-lg": ["30px", {"lineHeight": "38px", "letterSpacing": "-0.02em", "fontWeight": "800"}], "body-md": ["14px", {"lineHeight": "20px", "fontWeight": "500"}], "label-md": ["13px", {"lineHeight": "18px", "fontWeight": "600"}], "price-receipt": ["15px", {"lineHeight": "20px", "letterSpacing": "-0.01em", "fontWeight": "700"}] } } } };</script></head><body class="bg-surface font-body-md text-on-surface flex flex-col min-h-screen"><header class="fixed top-0 w-full z-50 bg-surface/90 backdrop-blur-xl shadow-[0_1px_8px_rgba(0,0,0,0.04)] pt-safe"><div class="h-14 px-margin flex items-center justify-between"><div class="flex items-center gap-space-sm"><button class="w-11 h-11 flex items-center justify-center text-on-surface rounded-full active:bg-surface-variant/40" onclick="history.back()"><span class="material-symbols-outlined text-[24px]">arrow_back</span></button><h1 class="font-headline-sm text-headline-sm tracking-tight text-on-surface">Chi Tiết Hóa Đơn</h1></div><div class="flex items-center gap-space-sm"><div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center"><span class="material-symbols-outlined text-on-primary text-[18px]">person</span></div></div></div></header><main class="flex flex-col relative w-full pt-14 pb-safe bg-surface min-h-screen"><div class="flex flex-col w-full pb-8">
+<!-- Top Context & Status Bar -->
+<div class="px-margin pt-space-md pb-space-sm flex items-center justify-between">
+<div class="flex items-center gap-space-xs">
+<span class="font-headline-sm text-headline-sm text-on-surface">Đơn #0124</span>
+
+</div>
+<div class="px-3 py-1 rounded-full bg-tertiary-fixed text-on-tertiary-fixed flex items-center gap-1.5 shadow-sm transition-all duration-300" id="status-pill">
+<span class="w-2 h-2 rounded-full bg-tertiary animate-pulse" id="status-dot"></span>
+<span class="font-label-sm text-label-sm uppercase tracking-wide" id="status-pill-text">Chưa thanh toán</span>
+</div>
+</div>
+<!-- Amber Alert Banner -->
+
+<!-- Thermal Paper Container Presentation -->
+<div class="px-margin flex flex-col items-center">
+<div class="w-full max-w-[340px] flex items-center justify-between mb-space-xs text-on-surface-variant px-1">
+<div class="flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px] text-secondary">bluetooth_connected</span>
+<span class="font-label-sm text-label-sm">ESC/POS 58mm • Sẵn sàng</span>
+</div>
+<span class="font-label-sm text-label-sm">Bản xem trước in</span>
+</div>
+<!-- 58mm Thermal Slip -->
+<div class="relative w-full max-w-[340px] bg-surface-container-lowest text-[#1a1a1a] shadow-md transition-all duration-200">
+<!-- Jagged Top Tear Edge (CSS inline SVG mask/pattern) -->
+<div class="w-full h-2.5 overflow-hidden leading-none select-none text-surface-container-lowest">
+<svg class="w-full h-full fill-current" preserveAspectRatio="none" viewBox="0 0 340 10">
+<polygon points="0,10 5,0 10,10 15,0 20,10 25,0 30,10 35,0 40,10 45,0 50,10 55,0 60,10 65,0 70,10 75,0 80,10 85,0 90,10 95,0 100,10 105,0 110,10 115,0 120,10 125,0 130,10 135,0 140,10 145,0 150,10 155,0 160,10 165,0 170,10 175,0 180,10 185,0 190,10 195,0 200,10 205,0 210,10 215,0 220,10 225,0 230,10 235,0 240,10 245,0 250,10 255,0 260,10 265,0 270,10 275,0 280,10 285,0 290,10 295,0 300,10 305,0 310,10 315,0 320,10 325,0 330,10 335,0 340,10"></polygon>
+</svg>
+</div>
+<!-- Receipt Content Body (Monospaced Receipt Look) -->
+<div class="px-4 py-3 font-mono text-[13px] leading-[18px] text-[#121212] tracking-tight"><!-- Center Header -->
+<div class="text-center font-bold text-[16px] tracking-wider mb-1 text-[#111]">ĐAKAO IN BILL</div>
+<!-- Order info line -->
+<div class="text-center text-[11px] text-[#333] mb-1.5">
+  Đơn #0124 • 11:35 24/10 • Mang về
+</div>
+<!-- Monospace dot divider -->
+<div class="text-[11px] text-center tracking-widest select-none text-[#555] my-1">--------------------------------</div>
+<!-- Items Header -->
+<div class="flex justify-between text-[11px] font-bold text-[#222] pb-0.5">
+  <span class="">MÓN</span>
+  <div class="flex gap-4">
+    <span class="w-6 text-center">SL</span>
+    <span class="w-16 text-right">THÀNH TIỀN</span>
+  </div>
+</div>
+<div class="text-[11px] text-center tracking-widest select-none text-[#555] my-1">--------------------------------</div>
+<!-- Line Items -->
+<div class="space-y-2 my-1.5">
+  <!-- Item 1 -->
+  <div>
+    <div class="flex justify-between text-[12px] font-bold text-[#111]">
+      <span class="">Cơm sườn</span>
+      <div class="flex gap-4">
+        <span class="w-6 text-center font-semibold">2</span>
+        <span class="w-16 text-right">90.000</span>
+      </div>
+    </div>
+    <div class="text-[10.5px] italic text-[#555] pl-2 leading-tight">* Ít mỡ, nước mắm ngọt</div>
+  </div>
+  <!-- Item 2 -->
+  <div>
+    <div class="flex justify-between text-[12px] font-bold text-[#111]">
+      <span class="">Cơm sườn bì chả</span>
+      <div class="flex gap-4">
+        <span class="w-6 text-center font-semibold">1</span>
+        <span class="w-16 text-right">55.000</span>
+      </div>
+    </div>
+  </div>
+  <!-- Item 3 -->
+  <div>
+    <div class="flex justify-between text-[12px] font-bold text-[#111]">
+      <span class="">Trứng ốp la</span>
+      <div class="flex gap-4">
+        <span class="w-6 text-center font-semibold">2</span>
+        <span class="w-16 text-right">20.000</span>
+      </div>
+    </div>
+    <div class="text-[10.5px] italic text-[#555] pl-2 leading-tight">* Lòng đào</div>
+  </div>
+  <!-- Item 4 -->
+  <div>
+    <div class="flex justify-between text-[12px] font-bold text-[#111]">
+      <span class="">Coca-Cola</span>
+      <div class="flex gap-4">
+        <span class="w-6 text-center font-semibold">1</span>
+        <span class="w-16 text-right">15.000</span>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- Monospace dot divider -->
+<div class="text-[11px] text-center tracking-widest select-none text-[#555] my-1">--------------------------------</div>
+<!-- Totals -->
+<div class="flex justify-between items-baseline font-bold text-[14px] my-1.5 text-[#111]">
+  <span class="">TỔNG CỘNG:</span>
+  <span class="text-[16px] tracking-tight">180.000đ</span>
+</div>
+<!-- Monospace dot divider -->
+<div class="text-[11px] text-center tracking-widest select-none text-[#555] my-1">--------------------------------</div>
+<!-- Status & Simple Footer -->
+<div class="py-1.5 text-center">
+  <div class="font-extrabold text-[12px] tracking-wider text-[#1a1a1a]" id="receipt-status-text">
+    TRẠNG THÁI: CHƯA THANH TOÁN
+  </div>
+  <div class="text-[11px] font-bold mt-2 text-[#333]">CẢM ƠN QUÝ KHÁCH!</div>
+</div></div>
+<!-- Jagged Bottom Tear Edge -->
+<div class="w-full h-2.5 overflow-hidden leading-none select-none text-surface-container-lowest rotate-180">
+<svg class="w-full h-full fill-current" preserveAspectRatio="none" viewBox="0 0 340 10">
+<polygon points="0,10 5,0 10,10 15,0 20,10 25,0 30,10 35,0 40,10 45,0 50,10 55,0 60,10 65,0 70,10 75,0 80,10 85,0 90,10 95,0 100,10 105,0 110,10 115,0 120,10 125,0 130,10 135,0 140,10 145,0 150,10 155,0 160,10 165,0 170,10 175,0 180,10 185,0 190,10 195,0 200,10 205,0 210,10 215,0 220,10 225,0 230,10 235,0 240,10 245,0 250,10 255,0 260,10 265,0 270,10 275,0 280,10 285,0 290,10 295,0 300,10 305,0 310,10 315,0 320,10 325,0 330,10 335,0 340,10"></polygon>
+</svg>
+</div>
+</div>
+</div>
+<!-- Action Controls Panel -->
+<div class="px-margin mt-space-lg flex flex-col gap-space-sm"><!-- Strong Primary Action: Mark as Paid -->
+<button class="w-full h-14 bg-primary text-on-primary font-label-lg text-label-lg rounded-xl flex items-center justify-center gap-space-sm active:scale-[0.98] transition-transform shadow-md" id="toggle-paid-btn" onclick="togglePaymentStatus()">
+  <span class="material-symbols-outlined text-[22px]" id="btn-status-icon">check_circle</span>
+  <span id="btn-status-text" class="">Đánh dấu đã trả</span>
+</button>
+<!-- Secondary Action: Reprint Bluetooth Bill -->
+<button class="w-full h-14 bg-surface-container text-on-surface font-label-lg text-label-lg rounded-xl flex items-center justify-center gap-space-sm active:scale-[0.98] transition-transform shadow-sm" onclick="simulatePrint()">
+  <span class="material-symbols-outlined text-primary text-[22px]">print</span>
+  <span class="">In lại bill (Bluetooth 58mm)</span>
+</button>
+<!-- Subtle Destructive Text Link -->
+<button class="w-full h-11 text-on-surface-variant/80 hover:text-error active:bg-error-container/40 font-label-md text-label-md rounded-lg flex items-center justify-center gap-space-xs transition-colors mt-space-xs" onclick="confirmCancelOrder()">
+  <span class="material-symbols-outlined text-[18px]">cancel</span>
+  <span class="">Huỷ đơn này</span>
+</button></div>
+<!-- Dynamic Toast Notification -->
+<div class="fixed bottom-6 left-1/2 -translate-x-1/2 bg-inverse-surface text-inverse-on-surface px-4 py-2.5 rounded-full font-label-md text-label-md flex items-center gap-2 shadow-lg opacity-0 pointer-events-none transition-opacity duration-200 z-50" id="toast">
+<span class="material-symbols-outlined text-secondary-fixed text-[18px]" id="toast-icon">check</span>
+<span id="toast-msg" class="">Đã cập nhật trạng thái đơn!</span>
+</div>
+</div>
+<script>
+  let isPaid = false;
+
+  function showToast(message, icon = 'check') {
+    const toast = document.getElementById('toast');
+    const toastMsg = document.getElementById('toast-msg');
+    const toastIcon = document.getElementById('toast-icon');
+    if (!toast) return;
+
+    toastMsg.textContent = message;
+    toastIcon.textContent = icon;
+    toast.classList.remove('opacity-0', 'pointer-events-none');
+    toast.classList.add('opacity-100');
+
+    setTimeout(() => {
+      toast.classList.remove('opacity-100');
+      toast.classList.add('opacity-0', 'pointer-events-none');
+    }, 2200);
+  }
+
+  function markAsPaid() {
+    isPaid = true;
+    updateUIState();
+    showToast('Đã đánh dấu ĐÃ THANH TOÁN thành công!');
+  }
+
+  function togglePaymentStatus() {
+    isPaid = !isPaid;
+    updateUIState();
+    showToast(isPaid ? 'Đã đổi: ĐÃ THANH TOÁN' : 'Đã đổi: CHƯA THANH TOÁN');
+  }
+
+  function updateUIState() {
+    const pill = document.getElementById('status-pill');
+    const pillDot = document.getElementById('status-dot');
+    const pillText = document.getElementById('status-pill-text');
+    const banner = document.getElementById('status-banner');
+    const bannerTitle = document.getElementById('banner-title');
+    const bannerDesc = document.getElementById('banner-desc');
+    const quickPaidBtn = document.getElementById('quick-paid-btn');
+    const receiptStatus = document.getElementById('receipt-status-text');
+    const btnStatusText = document.getElementById('btn-status-text');
+    const btnStatusIcon = document.getElementById('btn-status-icon');
+    const togglePaidBtn = document.getElementById('toggle-paid-btn');
+
+    if (isPaid) {
+      // Status pill to Paid (Green)
+      pill.className = 'px-3 py-1 rounded-full bg-secondary-container text-on-secondary-container flex items-center gap-1.5 shadow-sm transition-all duration-300';
+      pillDot.className = 'w-2 h-2 rounded-full bg-secondary';
+      pillText.textContent = 'Đã thanh toán';
+
+      // Banner update
+      banner.className = 'bg-secondary-container/50 rounded-xl p-space-md flex flex-col gap-space-sm shadow-sm transition-all duration-300';
+      bannerTitle.textContent = 'Đơn đã hoàn tất thanh toán';
+      bannerDesc.textContent = 'Tiền mặt / Chuyển khoản đã ghi nhận vào sổ thu ngân';
+      quickPaidBtn.classList.add('hidden');
+
+      // Receipt Slip status
+      receiptStatus.textContent = '*** TRẠNG THÁI: ĐÃ THANH TOÁN ***';
+      receiptStatus.className = 'font-extrabold text-[13px] tracking-wider text-secondary';
+
+      // CTA update
+      btnStatusText.textContent = 'Chuyển về Chưa thanh toán';
+      btnStatusIcon.textContent = 'replay';
+      togglePaidBtn.className = 'w-full h-14 bg-surface-container-highest text-on-surface font-label-lg text-label-lg rounded-xl flex items-center justify-center gap-space-sm active:scale-[0.98] transition-transform shadow-sm';
+    } else {
+      // Revert to Unpaid (Amber)
+      pill.className = 'px-3 py-1 rounded-full bg-tertiary-fixed text-on-tertiary-fixed flex items-center gap-1.5 shadow-sm transition-all duration-300';
+      pillDot.className = 'w-2 h-2 rounded-full bg-tertiary animate-pulse';
+      pillText.textContent = 'Chưa thanh toán';
+
+      banner.className = 'bg-tertiary-fixed/60 rounded-xl p-space-md flex flex-col gap-space-sm shadow-sm transition-all duration-300';
+      bannerTitle.textContent = 'Đơn chưa thanh toán';
+      bannerDesc.textContent = 'Khách đang dùng món / chờ nhân viên tính tiền tại bàn';
+      quickPaidBtn.classList.remove('hidden');
+
+      receiptStatus.textContent = '*** TRẠNG THÁI: CHƯA THANH TOÁN ***';
+      receiptStatus.className = 'font-extrabold text-[13px] tracking-wider text-[#1a1a1a]';
+
+      btnStatusText.textContent = 'Đánh dấu đã trả';
+      btnStatusIcon.textContent = 'check_circle';
+      togglePaidBtn.className = 'w-full h-14 bg-primary text-on-primary font-label-lg text-label-lg rounded-xl flex items-center justify-center gap-space-sm active:scale-[0.98] transition-transform shadow-sm';
+    }
+  }
+
+  function simulatePrint() {
+    showToast('Đang gửi lệnh in tới máy in nhiệt 58mm...', 'print');
+  }
+
+  function confirmCancelOrder() {
+    if (confirm('Xác nhận huỷ Đơn #0124? Lệnh này sẽ thu hồi đơn khỏi danh sách chế biến.')) {
+      showToast('Đã huỷ đơn #0124 thành công', 'delete');
+    }
+  }
+</script></main>
+
+</body></html>

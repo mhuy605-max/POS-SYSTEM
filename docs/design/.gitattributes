@@ -1,0 +1,2 @@
+# Preserve the approved Stitch export byte-for-byte, including generated HTML line endings.
+stitch_akao_in_bill_pos/** -text
