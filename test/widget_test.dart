@@ -40,11 +40,11 @@ void main() {
         case 'Bán hàng':
           expect(find.byKey(const Key('sales-search')), findsOneWidget);
         case 'Đơn hàng':
-          expect(find.text('Danh sách đơn hàng'), findsOneWidget);
+          expect(find.byKey(const Key('orders-filter')), findsOneWidget);
         case 'Doanh thu':
           expect(find.byKey(const Key('recognized-revenue')), findsOneWidget);
         case 'Món':
-          expect(find.text('Quản lý món'), findsOneWidget);
+          expect(find.byKey(const Key('catalog-search')), findsOneWidget);
         case 'Cài đặt':
           expect(
             find.byKey(const Key('open-printer-settings')),

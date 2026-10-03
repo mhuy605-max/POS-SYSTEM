@@ -14,6 +14,7 @@ import '../features/settings/printer_settings_screen.dart';
 import '../features/settings/backup_screen.dart';
 import '../features/settings/settings_screen.dart';
 import '../features/settings/shop_settings_screen.dart';
+import 'theme.dart';
 
 const _destinations = [
   (path: '/sales', label: 'Bán hàng', icon: Icons.point_of_sale_outlined),
@@ -38,12 +39,16 @@ final routerProvider = Provider<GoRouter>((ref) {
                 children: [
                   DecoratedBox(
                     decoration: BoxDecoration(
-                      color: const Color(0xFFFFE9E0),
+                      color: AppColors.primarySoft,
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: const SizedBox.square(
                       dimension: 44,
-                      child: Icon(Icons.receipt_long_outlined, size: 24),
+                      child: Icon(
+                        Icons.receipt_long_outlined,
+                        size: 24,
+                        color: AppColors.primary,
+                      ),
                     ),
                   ),
                   const SizedBox(width: 10),
@@ -56,18 +61,24 @@ final routerProvider = Provider<GoRouter>((ref) {
               ),
             ),
             body: child,
-            bottomNavigationBar: NavigationBar(
-              selectedIndex: selectedIndex < 0 ? 0 : selectedIndex,
-              onDestinationSelected: (index) {
-                context.go(_destinations[index].path);
-              },
-              destinations: [
-                for (final destination in _destinations)
-                  NavigationDestination(
-                    icon: Icon(destination.icon),
-                    label: destination.label,
-                  ),
-              ],
+            bottomNavigationBar: DecoratedBox(
+              decoration: const BoxDecoration(
+                border: Border(top: BorderSide(color: AppColors.outline)),
+              ),
+              child: NavigationBar(
+                selectedIndex: selectedIndex < 0 ? 0 : selectedIndex,
+                onDestinationSelected: (index) {
+                  context.go(_destinations[index].path);
+                },
+                destinations: [
+                  for (final destination in _destinations)
+                    NavigationDestination(
+                      icon: Icon(destination.icon),
+                      selectedIcon: Icon(destination.icon),
+                      label: destination.label,
+                    ),
+                ],
+              ),
             ),
           );
         },

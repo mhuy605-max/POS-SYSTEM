@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../app/design_system.dart';
 import '../../app/theme.dart';
 import '../../core/money.dart';
 import '../printing/printer_models.dart';
@@ -17,10 +18,11 @@ class OrderDetailsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final order = ref.watch(orderDetailsProvider(orderId));
     return Scaffold(
-      appBar: AppBar(title: const Text('Chi tiết đơn & bill 58mm')),
+      appBar: AppBar(title: const Text('Chi tiết đơn')),
       body: order.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, _) => Center(child: Text('Không thể tải đơn: $error')),
+        loading: () => const AppLoadingState(label: 'Đang tải chi tiết đơn'),
+        error: (error, _) =>
+            const AppAsyncError(message: 'Không thể tải chi tiết đơn hàng.'),
         data: (value) => _Details(order: value),
       ),
     );
@@ -68,52 +70,44 @@ class _Details extends ConsumerWidget {
           ],
         ),
       ),
-      SafeArea(
-        top: false,
-        child: Material(
-          color: Colors.white,
-          elevation: 8,
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (order.status == OrderStatus.unpaid)
-                  SizedBox(
-                    width: double.infinity,
-                    child: FilledButton.icon(
-                      key: const Key('mark-paid'),
-                      onPressed: () => ref
-                          .read(orderListControllerProvider.notifier)
-                          .markPaid(order.id),
-                      icon: const Icon(Icons.check_circle_outline),
-                      label: const Text('Đánh dấu đã trả'),
-                      style: FilledButton.styleFrom(
-                        backgroundColor: AppColors.success,
-                      ),
-                    ),
+      AppBottomActionSurface(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (order.status == OrderStatus.unpaid)
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton.icon(
+                  key: const Key('mark-paid'),
+                  onPressed: () => ref
+                      .read(orderListControllerProvider.notifier)
+                      .markPaid(order.id),
+                  icon: const Icon(Icons.check_circle_outline),
+                  label: const Text('Đánh dấu đã trả'),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: AppColors.success,
                   ),
-                if (order.status != OrderStatus.cancelled) ...[
-                  const SizedBox(height: 8),
-                  SizedBox(
-                    width: double.infinity,
-                    child: OutlinedButton.icon(
-                      key: const Key('cancel-order'),
-                      onPressed: () => _confirmCancel(context, ref),
-                      icon: const Icon(Icons.cancel_outlined),
-                      label: const Text('Hủy đơn'),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: AppColors.error,
-                        minimumSize: const Size(48, 52),
-                      ),
-                    ),
+                ),
+              ),
+            if (order.status != OrderStatus.cancelled) ...[
+              const SizedBox(height: 8),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  key: const Key('cancel-order'),
+                  onPressed: () => _confirmCancel(context, ref),
+                  icon: const Icon(Icons.cancel_outlined),
+                  label: const Text('Hủy đơn'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.error,
+                    minimumSize: const Size(48, 52),
                   ),
-                ],
-                const SizedBox(height: 8),
-                _ReprintButton(order: order),
-              ],
-            ),
-          ),
+                ),
+              ),
+            ],
+            const SizedBox(height: 8),
+            _ReprintButton(order: order),
+          ],
         ),
       ),
     ],

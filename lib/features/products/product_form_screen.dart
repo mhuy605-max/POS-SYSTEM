@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../app/design_system.dart';
 import '../../app/theme.dart';
 import '../../core/money.dart';
 import 'catalog_controller.dart';
@@ -193,8 +194,6 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
                     ScrollViewKeyboardDismissBehavior.onDrag,
                 padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
                 children: [
-                  if (!_editing) const _QuickCreateCallout(),
-                  if (!_editing) const SizedBox(height: 16),
                   if (_editing) ...[
                     _buildImageSection(),
                     const SizedBox(height: 16),
@@ -248,8 +247,10 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
                                   label: Text('${value ~/ 1000}k'),
                                   onPressed: () =>
                                       _priceController.text = value.toString(),
-                                  backgroundColor: AppColors.surfaceHigh,
-                                  side: BorderSide.none,
+                                  backgroundColor: AppColors.surface,
+                                  side: const BorderSide(
+                                    color: AppColors.outline,
+                                  ),
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(8),
                                   ),
@@ -281,13 +282,17 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
                                       () => _categoryId = category.id,
                                     ),
                                     showCheckmark: false,
-                                    selectedColor: AppColors.primary,
-                                    backgroundColor: AppColors.surfaceHigh,
-                                    side: BorderSide.none,
+                                    selectedColor: AppColors.primarySoft,
+                                    backgroundColor: AppColors.surface,
+                                    side: BorderSide(
+                                      color: _categoryId == category.id
+                                          ? AppColors.primary
+                                          : AppColors.outline,
+                                    ),
                                     labelStyle: TextStyle(
                                       color: _categoryId == category.id
-                                          ? Colors.white
-                                          : AppColors.ink,
+                                          ? AppColors.primaryStrong
+                                          : AppColors.secondaryInk,
                                       fontWeight: FontWeight.w700,
                                     ),
                                   ),
@@ -334,10 +339,9 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
                       value: _isAvailable,
                       onChanged: (value) =>
                           setState(() => _isAvailable = value),
-                      activeTrackColor: AppColors.success,
                       title: const Text(
                         'Trạng thái bán hàng',
-                        style: TextStyle(fontWeight: FontWeight.w800),
+                        style: TextStyle(fontWeight: FontWeight.w700),
                       ),
                       subtitle: Text(
                         _isAvailable
@@ -377,9 +381,7 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
             ),
       bottomNavigationBar: _loading || _loadError != null
           ? null
-          : SafeArea(
-              top: false,
-              minimum: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+          : AppBottomActionSurface(
               child: FilledButton.icon(
                 key: const Key('save-product'),
                 onPressed: _saving || _categories.isEmpty ? null : _save,
@@ -433,35 +435,7 @@ class _FieldLabel extends StatelessWidget {
               ),
             ],
     ),
-    style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
-  );
-}
-
-class _QuickCreateCallout extends StatelessWidget {
-  const _QuickCreateCallout();
-
-  @override
-  Widget build(BuildContext context) => DecoratedBox(
-    decoration: BoxDecoration(
-      color: AppColors.surfaceHigh,
-      borderRadius: BorderRadius.circular(16),
-    ),
-    child: const Padding(
-      padding: EdgeInsets.all(16),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(Icons.bolt_rounded, color: AppColors.primary),
-          SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              'Tạo món siêu tốc\nĐiền thông tin cần thiết để món sẵn sàng bán.',
-              style: TextStyle(fontWeight: FontWeight.w600),
-            ),
-          ),
-        ],
-      ),
-    ),
+    style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
   );
 }
 
@@ -499,13 +473,15 @@ class _ImageSection extends ConsumerWidget {
                 const Expanded(
                   child: Text(
                     'Ảnh minh họa',
-                    style: TextStyle(fontWeight: FontWeight.w800),
+                    style: TextStyle(fontWeight: FontWeight.w700),
                   ),
                 ),
                 Text(
                   hasImage ? 'Đã chọn' : 'Tùy chọn',
-                  style: const TextStyle(
-                    color: AppColors.success,
+                  style: TextStyle(
+                    color: hasImage
+                        ? AppColors.success
+                        : AppColors.secondaryInk,
                     fontSize: 12,
                   ),
                 ),
@@ -568,7 +544,7 @@ class _ImageSection extends ConsumerWidget {
                       SizedBox(height: 8),
                       Text(
                         'Chọn ảnh món ăn',
-                        style: TextStyle(fontWeight: FontWeight.w800),
+                        style: TextStyle(fontWeight: FontWeight.w700),
                       ),
                       Text(
                         'Không có ảnh vẫn bán được',
@@ -593,7 +569,7 @@ class _ReceiptLinePreview extends StatelessWidget {
   @override
   Widget build(BuildContext context) => DecoratedBox(
     decoration: BoxDecoration(
-      color: AppColors.surfaceHigh,
+      color: AppColors.surfaceLow,
       borderRadius: BorderRadius.circular(16),
     ),
     child: Padding(
@@ -607,7 +583,7 @@ class _ReceiptLinePreview extends StatelessWidget {
           ),
           Text(
             formatVnd(price),
-            style: const TextStyle(fontWeight: FontWeight.w800),
+            style: const TextStyle(fontWeight: FontWeight.w700),
           ),
         ],
       ),

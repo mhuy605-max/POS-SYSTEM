@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../app/design_system.dart';
 import '../../app/theme.dart';
 import '../../core/money.dart';
 import 'catalog_controller.dart';
@@ -88,13 +89,11 @@ class _CategoryManagementScreenState
     return Scaffold(
       appBar: AppBar(title: const Text('Danh mục')),
       body: categories.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, stack) => Center(
-          child: FilledButton.tonalIcon(
-            onPressed: ref.read(categoryControllerProvider.notifier).refresh,
-            icon: const Icon(Icons.refresh),
-            label: const Text('Thử lại'),
-          ),
+        loading: () => const AppLoadingState(label: 'Đang tải danh mục'),
+        error: (error, stack) => AppAsyncError(
+          message: 'Không thể tải danh mục.',
+          onRetry: () =>
+              ref.read(categoryControllerProvider.notifier).refresh(),
         ),
         data: (items) => ListView(
           key: const Key('category-list'),
@@ -104,7 +103,7 @@ class _CategoryManagementScreenState
             const SizedBox(height: 20),
             const Text(
               'Tạo danh mục mới',
-              style: TextStyle(fontWeight: FontWeight.w800),
+              style: TextStyle(fontWeight: FontWeight.w700),
             ),
             const SizedBox(height: 8),
             Row(
@@ -140,13 +139,13 @@ class _CategoryManagementScreenState
                     style: TextStyle(
                       color: AppColors.secondaryInk,
                       fontSize: 11,
-                      fontWeight: FontWeight.w800,
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
                 ),
                 Text(
                   'Giữ & kéo để xếp',
-                  style: TextStyle(color: AppColors.primary, fontSize: 11),
+                  style: TextStyle(color: AppColors.secondaryInk, fontSize: 11),
                 ),
               ],
             ),
@@ -202,7 +201,7 @@ class _CategorySummary extends StatelessWidget {
           children: [
             const DecoratedBox(
               decoration: BoxDecoration(
-                color: Color(0xFFFFDBCE),
+                color: AppColors.primarySoft,
                 borderRadius: BorderRadius.all(Radius.circular(12)),
               ),
               child: Padding(
@@ -217,35 +216,11 @@ class _CategorySummary extends StatelessWidget {
                 style: const TextStyle(fontWeight: FontWeight.w700),
               ),
             ),
-            const _SyncedBadge(),
           ],
         ),
       ),
     );
   }
-}
-
-class _SyncedBadge extends StatelessWidget {
-  const _SyncedBadge();
-
-  @override
-  Widget build(BuildContext context) => DecoratedBox(
-    decoration: BoxDecoration(
-      color: AppColors.successContainer,
-      borderRadius: BorderRadius.circular(999),
-    ),
-    child: const Padding(
-      padding: EdgeInsets.symmetric(horizontal: 9, vertical: 5),
-      child: Text(
-        'ĐÃ LƯU',
-        style: TextStyle(
-          color: AppColors.success,
-          fontSize: 10,
-          fontWeight: FontWeight.w800,
-        ),
-      ),
-    ),
-  );
 }
 
 class _CategoryRow extends StatelessWidget {
@@ -281,7 +256,7 @@ class _CategoryRow extends StatelessWidget {
           const SizedBox(width: 6),
           DecoratedBox(
             decoration: BoxDecoration(
-              color: const Color(0xFFFFE9E0),
+              color: AppColors.primarySoft,
               borderRadius: BorderRadius.circular(12),
             ),
             child: const SizedBox.square(
@@ -300,7 +275,7 @@ class _CategoryRow extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
                     fontSize: 17,
-                    fontWeight: FontWeight.w800,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
                 Text(
@@ -324,7 +299,7 @@ class _CategoryRow extends StatelessWidget {
             key: Key('category-active-${category.id}'),
             value: category.isActive,
             onChanged: onActiveChanged,
-            activeTrackColor: AppColors.success,
+            activeTrackColor: AppColors.primary,
           ),
         ],
       ),
@@ -338,7 +313,7 @@ class _CategoryRuleCallout extends StatelessWidget {
   @override
   Widget build(BuildContext context) => DecoratedBox(
     decoration: BoxDecoration(
-      color: AppColors.surfaceHigh,
+      color: AppColors.surfaceLow,
       borderRadius: BorderRadius.circular(16),
     ),
     child: const Padding(

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../app/design_system.dart';
 import '../../app/theme.dart';
 import 'shop_settings_controller.dart';
 import 'shop_settings_repository.dart';
@@ -36,9 +37,9 @@ class _ShopSettingsScreenState extends ConsumerState<ShopSettingsScreen> {
     return Scaffold(
       appBar: AppBar(title: const Text('Thông tin quán & bill')),
       body: settings.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () => const AppLoadingState(label: 'Đang tải thông tin quán'),
         error: (error, _) =>
-            Center(child: Text('Không thể đọc cài đặt: $error')),
+            const AppAsyncError(message: 'Không thể đọc thông tin quán.'),
         data: (value) {
           if (!_initialized) {
             _initialized = true;
@@ -55,7 +56,7 @@ class _ShopSettingsScreenState extends ConsumerState<ShopSettingsScreen> {
               children: [
                 const Text(
                   'Thông tin hiển thị trên bill mới',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
                 ),
                 const SizedBox(height: 14),
                 _field(
@@ -81,7 +82,7 @@ class _ShopSettingsScreenState extends ConsumerState<ShopSettingsScreen> {
                 const SizedBox(height: 20),
                 const Text(
                   'Xem trước bill 58mm',
-                  style: TextStyle(fontWeight: FontWeight.w800),
+                  style: TextStyle(fontWeight: FontWeight.w700),
                 ),
                 const SizedBox(height: 10),
                 AnimatedBuilder(
@@ -188,9 +189,9 @@ class _ReceiptPreview extends StatelessWidget {
       width: 280,
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(8),
-        boxShadow: const [BoxShadow(color: Color(0x14000000), blurRadius: 12)],
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.outline),
       ),
       child: Column(
         children: [
@@ -210,8 +211,17 @@ class _ReceiptPreview extends StatelessWidget {
             child: Text('------------------------------'),
           ),
           const Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [Text('Món mẫu x1'), Text('45.000đ')],
+            children: [
+              Expanded(
+                child: Text(
+                  'Món mẫu x1',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              SizedBox(width: 8),
+              Text('45.000đ'),
+            ],
           ),
           const Padding(
             padding: EdgeInsets.symmetric(vertical: 10),

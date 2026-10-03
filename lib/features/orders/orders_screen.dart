@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../app/design_system.dart';
 import '../../app/theme.dart';
 import '../../core/money.dart';
 import 'order_providers.dart';
@@ -20,51 +21,53 @@ class OrdersScreen extends ConsumerWidget {
         slivers: [
           SliverToBoxAdapter(
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Danh sách đơn hàng',
-                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800),
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+              child: SegmentedButton<OrderListFilter>(
+                key: const Key('orders-filter'),
+                showSelectedIcon: false,
+                segments: const [
+                  ButtonSegment(
+                    value: OrderListFilter.all,
+                    label: Text('Tất cả'),
                   ),
-                  const SizedBox(height: 12),
-                  SegmentedButton<OrderListFilter>(
-                    showSelectedIcon: false,
-                    segments: const [
-                      ButtonSegment(
-                        value: OrderListFilter.all,
-                        label: Text('Tất cả'),
-                      ),
-                      ButtonSegment(
-                        value: OrderListFilter.unpaid,
-                        label: Text('Chưa trả'),
-                      ),
-                      ButtonSegment(
-                        value: OrderListFilter.paid,
-                        label: Text('Đã trả'),
-                      ),
-                    ],
-                    selected: {filter},
-                    onSelectionChanged: (value) => ref
-                        .read(orderListControllerProvider.notifier)
-                        .setFilter(value.single),
+                  ButtonSegment(
+                    value: OrderListFilter.unpaid,
+                    label: Text('Chưa trả'),
+                  ),
+                  ButtonSegment(
+                    value: OrderListFilter.paid,
+                    label: Text('Đã trả'),
                   ),
                 ],
+                selected: {filter},
+                onSelectionChanged: (value) => ref
+                    .read(orderListControllerProvider.notifier)
+                    .setFilter(value.single),
               ),
             ),
           ),
           orders.when(
             loading: () => const SliverFillRemaining(
-              child: Center(child: CircularProgressIndicator()),
+              child: AppLoadingState(label: 'Đang tải đơn hàng'),
             ),
             error: (error, _) => SliverFillRemaining(
-              child: Center(child: Text('Không thể tải đơn: $error')),
+              child: AppAsyncError(
+                message: 'Không thể tải danh sách đơn hàng.',
+                onRetry: ref.read(orderListControllerProvider.notifier).refresh,
+              ),
             ),
             data: (items) => items.isEmpty
-                ? const SliverFillRemaining(
+                ? SliverFillRemaining(
                     hasScrollBody: false,
-                    child: Center(child: Text('Chưa có đơn phù hợp.')),
+                    child: AppEmptyState(
+                      icon: Icons.receipt_long_outlined,
+                      title: filter == OrderListFilter.all
+                          ? 'Chưa có đơn hàng'
+                          : 'Chưa có đơn phù hợp',
+                      message: filter == OrderListFilter.all
+                          ? 'Đơn đã lưu sẽ xuất hiện tại đây.'
+                          : 'Thử chọn trạng thái khác để xem đơn.',
+                    ),
                   )
                 : SliverPadding(
                     padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
@@ -128,10 +131,9 @@ class _OrderCard extends ConsumerWidget {
               children: [
                 Text(
                   formatVnd(order.total),
-                  style: const TextStyle(
-                    fontSize: 21,
-                    fontWeight: FontWeight.w800,
-                    color: AppColors.primary,
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    color: AppColors.primaryStrong,
+                    fontFeatures: const [FontFeature.tabularFigures()],
                   ),
                 ),
                 const Spacer(),
@@ -166,40 +168,12 @@ class OrderStatusBadge extends StatelessWidget {
   final OrderStatus status;
   @override
   Widget build(BuildContext context) {
-    final (label, background, foreground) = switch (status) {
-      OrderStatus.unpaid => (
-        'Chưa thanh toán',
-        const Color(0xFFFFDCC3),
-        const Color(0xFF6E3900),
-      ),
-      OrderStatus.paid => (
-        'Đã thanh toán',
-        AppColors.successContainer,
-        AppColors.success,
-      ),
-      OrderStatus.cancelled => (
-        'Đã hủy',
-        const Color(0xFFFFDAD6),
-        AppColors.error,
-      ),
+    final (label, tone) = switch (status) {
+      OrderStatus.unpaid => ('Chưa thanh toán', AppStatusTone.warning),
+      OrderStatus.paid => ('Đã thanh toán', AppStatusTone.success),
+      OrderStatus.cancelled => ('Đã hủy', AppStatusTone.error),
     };
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: background,
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-        child: Text(
-          label,
-          style: TextStyle(
-            color: foreground,
-            fontSize: 11,
-            fontWeight: FontWeight.w800,
-          ),
-        ),
-      ),
-    );
+    return AppStatusBadge(label: label, tone: tone);
   }
 }
 

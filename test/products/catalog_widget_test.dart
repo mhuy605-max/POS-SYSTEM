@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:dakao_in_bill/app/app.dart';
+import 'package:dakao_in_bill/app/theme.dart';
 import 'package:dakao_in_bill/data/app_database.dart';
 import 'package:dakao_in_bill/data/database_provider.dart';
 import 'package:dakao_in_bill/features/products/catalog_controller.dart';
@@ -54,7 +55,8 @@ void main() {
 
       await tester.tap(find.text('Cơm').last);
       await tester.pumpAndSettle();
-      expect(find.text('Chưa có món phù hợp.'), findsOneWidget);
+      expect(find.text('Không tìm thấy món'), findsOneWidget);
+      expect(find.text('Thử từ khóa hoặc danh mục khác.'), findsOneWidget);
     },
   );
 
@@ -66,6 +68,20 @@ void main() {
     await tester.tap(find.byKey(const Key('add-product')));
     await tester.pumpAndSettle();
     expect(find.text('Thêm món'), findsOneWidget);
+    await tester.drag(
+      find.byKey(const Key('product-form-scroll')),
+      const Offset(0, -900),
+    );
+    await tester.pumpAndSettle();
+    expect(
+      tester.widget<Text>(find.text('Tùy chọn').last).style?.color,
+      AppColors.secondaryInk,
+    );
+    await tester.drag(
+      find.byKey(const Key('product-form-scroll')),
+      const Offset(0, 900),
+    );
+    await tester.pumpAndSettle();
 
     await tester.enterText(
       find.byKey(const Key('product-name')),
@@ -77,6 +93,43 @@ void main() {
 
     expect(find.text('Cơm sườn bì'), findsOneWidget);
     expect(find.text('55.000đ'), findsOneWidget);
+  });
+
+  testWidgets('empty catalog and filtered miss have distinct guidance', (
+    tester,
+  ) async {
+    await _pumpApp(tester, database, repository, imageRoot);
+    await _openCatalog(tester);
+
+    expect(find.text('Chưa có món nào'), findsOneWidget);
+    expect(find.text('Thêm món đầu tiên để bắt đầu bán hàng.'), findsOneWidget);
+    expect(find.text('Thêm món đầu tiên'), findsOneWidget);
+    expect(find.byKey(const Key('add-product')), findsOneWidget);
+    expect(find.text('Thêm món mới'), findsNothing);
+
+    final categoryId = await repository.createCategory('Món Việt');
+    await repository.createProduct(
+      ProductDraft(
+        categoryId: categoryId,
+        name: 'Bún thịt nướng chả giò đặc biệt',
+        price: 65000,
+      ),
+    );
+    await tester.pumpWidget(const SizedBox());
+    await tester.pump();
+    await _pumpApp(tester, database, repository, imageRoot);
+    await _openCatalog(tester);
+    await tester.enterText(
+      find.byKey(const Key('catalog-search')),
+      'không tồn tại',
+    );
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Không tìm thấy món'), findsOneWidget);
+    expect(find.text('Thử từ khóa hoặc danh mục khác.'), findsOneWidget);
+    expect(find.text('Thêm món đầu tiên'), findsNothing);
+    expect(find.byKey(const Key('add-product')), findsNothing);
   });
 
   testWidgets('soft delete offers a working restore action', (tester) async {

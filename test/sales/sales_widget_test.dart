@@ -1,3 +1,5 @@
+import 'dart:ui' show SemanticsAction, Tristate;
+
 import 'package:dakao_in_bill/app/app.dart';
 import 'package:dakao_in_bill/data/app_database.dart';
 import 'package:dakao_in_bill/data/database_provider.dart';
@@ -123,6 +125,32 @@ void main() {
       find.descendant(of: note, matching: find.byType(EditableText)),
     );
     expect(field.controller.text, 'LessIce');
+  });
+
+  testWidgets('order type controls expose button and selection semantics', (
+    tester,
+  ) async {
+    final semantics = tester.ensureSemantics();
+    await _pump(tester, database, products);
+    await tester.tap(find.byKey(Key('sale-product-$productId')));
+    await tester.tap(find.byKey(const Key('open-current-order')));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Tại quán'));
+    await tester.pumpAndSettle();
+
+    final dineIn = tester.getSemantics(find.bySemanticsLabel('Tại quán'));
+    expect(dineIn.flagsCollection.isButton, isTrue);
+    expect(dineIn.flagsCollection.isEnabled, Tristate.isTrue);
+    expect(dineIn.flagsCollection.isSelected, Tristate.isTrue);
+    expect(dineIn.getSemanticsData().hasAction(SemanticsAction.tap), isTrue);
+
+    final takeaway = tester.getSemantics(find.bySemanticsLabel('Mang về'));
+    expect(takeaway.flagsCollection.isButton, isTrue);
+    expect(takeaway.flagsCollection.isEnabled, Tristate.isTrue);
+    expect(takeaway.flagsCollection.isSelected, Tristate.isFalse);
+    expect(takeaway.getSemanticsData().hasAction(SemanticsAction.tap), isTrue);
+    semantics.dispose();
   });
 
   testWidgets('removing one same-product line keeps the other note', (

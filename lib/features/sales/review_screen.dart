@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../app/design_system.dart';
 import '../../app/theme.dart';
 import '../../core/money.dart';
 import '../orders/order_repository.dart';
@@ -70,15 +71,10 @@ class ReviewScreen extends ConsumerWidget {
             ),
             Expanded(
               child: cart.lines.isEmpty
-                  ? const Center(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.shopping_bag_outlined, size: 52),
-                          SizedBox(height: 12),
-                          Text('Đơn hiện tại đang trống'),
-                        ],
-                      ),
+                  ? const AppEmptyState(
+                      icon: Icons.shopping_bag_outlined,
+                      title: 'Đơn hiện tại đang trống',
+                      message: 'Quay lại Bán hàng để thêm món vào đơn.',
                     )
                   : ListView.separated(
                       padding: const EdgeInsets.all(16),
@@ -91,65 +87,60 @@ class ReviewScreen extends ConsumerWidget {
                       ),
                     ),
             ),
-            SafeArea(
-              top: false,
-              child: Material(
-                color: Colors.white,
-                elevation: 8,
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
+            AppBottomActionSurface(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Row(
                     children: [
-                      Row(
-                        children: [
-                          const Text(
-                            'Tổng cộng',
-                            style: TextStyle(
-                              fontSize: 17,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                          const Spacer(),
-                          Text(
-                            formatVnd(cart.total),
-                            style: const TextStyle(
-                              fontSize: 22,
-                              fontWeight: FontWeight.w800,
-                              color: AppColors.primary,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 10),
-                      FilledButton.icon(
-                        key: const Key('submit-order'),
-                        onPressed: cart.lines.isEmpty || cart.isSubmitting
-                            ? null
-                            : () => _submit(context, ref),
-                        icon: cart.isSubmitting
-                            ? const SizedBox.square(
-                                dimension: 20,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: Colors.white,
-                                ),
-                              )
-                            : const Icon(Icons.print_outlined),
-                        label: Text('In bill • ${formatVnd(cart.total)}'),
-                      ),
-                      const SizedBox(height: 5),
                       const Text(
-                        'Đơn được lưu trước, sau đó gửi đến máy in đã chọn',
-                        textAlign: TextAlign.center,
+                        'Tổng cộng',
                         style: TextStyle(
-                          fontSize: 11,
-                          color: AppColors.secondaryInk,
+                          fontSize: 17,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const Spacer(),
+                      AppAnimatedValue(
+                        value: cart.total,
+                        child: Text(
+                          formatVnd(cart.total),
+                          style: const TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.primaryStrong,
+                          ),
                         ),
                       ),
                     ],
                   ),
-                ),
+                  const SizedBox(height: 10),
+                  FilledButton.icon(
+                    key: const Key('submit-order'),
+                    onPressed: cart.lines.isEmpty || cart.isSubmitting
+                        ? null
+                        : () => _submit(context, ref),
+                    icon: cart.isSubmitting
+                        ? const SizedBox.square(
+                            dimension: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                        : const Icon(Icons.print_outlined),
+                    label: Text('In bill • ${formatVnd(cart.total)}'),
+                  ),
+                  const SizedBox(height: 5),
+                  const Text(
+                    'Đơn được lưu trước, sau đó gửi đến máy in đã chọn',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: AppColors.secondaryInk,
+                    ),
+                  ),
+                ],
               ),
             ),
           ],
@@ -212,15 +203,66 @@ class _TypeButton extends StatelessWidget {
   final bool selected;
   final VoidCallback? onPressed;
   @override
-  Widget build(BuildContext context) => FilledButton.tonalIcon(
-    onPressed: onPressed,
-    style: FilledButton.styleFrom(
-      backgroundColor: selected ? AppColors.ink : AppColors.surfaceHigh,
-      foregroundColor: selected ? Colors.white : AppColors.ink,
-    ),
-    icon: Icon(icon),
-    label: Text(label),
-  );
+  Widget build(BuildContext context) {
+    final enabled = onPressed != null;
+    return Semantics(
+      button: true,
+      selected: selected,
+      enabled: enabled,
+      label: label,
+      onTap: onPressed,
+      excludeSemantics: true,
+      child: AnimatedOpacity(
+        opacity: enabled ? 1 : .48,
+        duration: AppMotion.duration(context, AppMotion.fast),
+        child: AnimatedContainer(
+          duration: AppMotion.duration(context, AppMotion.standard),
+          curve: AppMotion.curve,
+          decoration: BoxDecoration(
+            color: selected ? AppColors.primarySoft : AppColors.surface,
+            border: Border.all(
+              color: selected ? AppColors.primary : AppColors.outline,
+            ),
+            borderRadius: BorderRadius.circular(AppRadii.button),
+          ),
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: onPressed,
+              excludeFromSemantics: true,
+              borderRadius: BorderRadius.circular(AppRadii.button),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(
+                  minHeight: AppSizes.buttonHeight,
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      icon,
+                      color: selected
+                          ? AppColors.primaryStrong
+                          : AppColors.secondaryInk,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      label,
+                      style: TextStyle(
+                        color: selected
+                            ? AppColors.primaryStrong
+                            : AppColors.secondaryInk,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class _CartLineCard extends ConsumerStatefulWidget {
@@ -291,9 +333,12 @@ class _CartLineCardState extends ConsumerState<_CartLineCard> {
                   ],
                 ),
               ),
-              Text(
-                formatVnd(widget.line.lineTotal),
-                style: const TextStyle(fontWeight: FontWeight.w800),
+              AppAnimatedValue(
+                value: widget.line.lineTotal,
+                child: Text(
+                  formatVnd(widget.line.lineTotal),
+                  style: const TextStyle(fontWeight: FontWeight.w700),
+                ),
               ),
             ],
           ),
@@ -337,10 +382,13 @@ class _CartLineCardState extends ConsumerState<_CartLineCard> {
               ),
               SizedBox(
                 width: 36,
-                child: Text(
-                  '${widget.line.quantity}',
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(fontWeight: FontWeight.w800),
+                child: AppAnimatedValue(
+                  value: widget.line.quantity,
+                  child: Text(
+                    '${widget.line.quantity}',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(fontWeight: FontWeight.w700),
+                  ),
                 ),
               ),
               IconButton(

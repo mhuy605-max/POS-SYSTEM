@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../app/design_system.dart';
 import '../../app/theme.dart';
 import '../../core/money.dart';
 import 'revenue_chart.dart';
@@ -23,19 +24,9 @@ class RevenueScreen extends ConsumerWidget {
       child: ListView(
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
         children: [
-          const Text(
-            'BÁO CÁO BÁN HÀNG',
-            style: TextStyle(
-              color: AppColors.secondaryInk,
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 1.1,
-            ),
-          ),
-          const SizedBox(height: 4),
           Text(
             _periodTitle(selection.preset),
-            style: const TextStyle(fontSize: 23, fontWeight: FontWeight.w800),
+            style: Theme.of(context).textTheme.headlineSmall,
           ),
           const SizedBox(height: 4),
           Text(
@@ -48,15 +39,21 @@ class RevenueScreen extends ConsumerWidget {
           summary.when(
             loading: () => const SizedBox(
               height: 320,
-              child: Center(child: CircularProgressIndicator()),
+              child: AppLoadingState(label: 'Đang tính doanh thu'),
             ),
-            error: (error, _) => Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Text('Không thể đọc doanh thu: $error'),
+            error: (error, _) => AppAsyncError(
+              message: 'Không thể đọc báo cáo doanh thu.',
+              onRetry: () => ref.invalidate(revenueSummaryProvider),
+            ),
+            data: (value) => AnimatedSwitcher(
+              duration: AppMotion.duration(context, AppMotion.standard),
+              child: _RevenueContent(
+                key: ValueKey(
+                  '${period.startEpochMillis}-${period.endExclusiveEpochMillis}',
+                ),
+                summary: value,
               ),
             ),
-            data: (value) => _RevenueContent(summary: value),
           ),
         ],
       ),
@@ -80,6 +77,18 @@ class _PeriodSelector extends ConsumerWidget {
               key: Key('period-${preset.name}'),
               label: Text(_presetLabel(preset)),
               selected: selection.preset == preset,
+              selectedColor: AppColors.primarySoft,
+              side: BorderSide(
+                color: selection.preset == preset
+                    ? AppColors.primary
+                    : AppColors.outline,
+              ),
+              labelStyle: TextStyle(
+                color: selection.preset == preset
+                    ? AppColors.primaryStrong
+                    : AppColors.secondaryInk,
+                fontWeight: FontWeight.w700,
+              ),
               onSelected: (_) => ref
                   .read(revenuePeriodControllerProvider.notifier)
                   .selectPreset(preset),
@@ -93,7 +102,7 @@ class _PeriodSelector extends ConsumerWidget {
 }
 
 class _RevenueContent extends StatelessWidget {
-  const _RevenueContent({required this.summary});
+  const _RevenueContent({required this.summary, super.key});
 
   final RevenueSummary summary;
 
@@ -124,16 +133,21 @@ class _RevenueContent extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 8),
-                FittedBox(
-                  fit: BoxFit.scaleDown,
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    formatVnd(summary.recognizedRevenue),
-                    key: const Key('recognized-revenue'),
-                    style: const TextStyle(
-                      fontSize: 32,
-                      fontWeight: FontWeight.w800,
-                      color: AppColors.ink,
+                AppAnimatedValue(
+                  value: summary.recognizedRevenue,
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      formatVnd(summary.recognizedRevenue),
+                      key: const Key('recognized-revenue'),
+                      style: const TextStyle(
+                        fontSize: 34,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.ink,
+                        letterSpacing: -0.6,
+                        fontFeatures: [FontFeature.tabularFigures()],
+                      ),
                     ),
                   ),
                 ),
@@ -154,7 +168,7 @@ class _RevenueContent extends StatelessWidget {
                         label: 'Tiền chưa thu hiện tại',
                         value: formatVnd(summary.unpaidAmount),
                         valueKey: 'unpaid-total',
-                        color: AppColors.error,
+                        color: AppColors.warning,
                       ),
                     ),
                   ],
@@ -172,7 +186,7 @@ class _RevenueContent extends StatelessWidget {
               children: [
                 const Text(
                   'Doanh thu theo ngày',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
                 ),
                 const SizedBox(height: 12),
                 RevenueBarChart(points: summary.dailyRevenue),
@@ -199,7 +213,7 @@ class _RevenueContent extends StatelessWidget {
                         'Món bán chạy trong kỳ',
                         style: TextStyle(
                           fontSize: 18,
-                          fontWeight: FontWeight.w800,
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
                     ),
@@ -265,7 +279,7 @@ class _Metric extends StatelessWidget {
             child: Text(
               value,
               key: Key(valueKey),
-              style: TextStyle(fontWeight: FontWeight.w800, color: color),
+              style: TextStyle(fontWeight: FontWeight.w700, color: color),
             ),
           ),
         ],
@@ -311,7 +325,7 @@ class _BestSellerRow extends StatelessWidget {
               '${item.quantity} phần',
               style: const TextStyle(
                 color: AppColors.primary,
-                fontWeight: FontWeight.w800,
+                fontWeight: FontWeight.w700,
               ),
             ),
           ],

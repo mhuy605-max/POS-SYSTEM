@@ -17,7 +17,7 @@ class BackupScreen extends ConsumerWidget {
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 28),
         children: [
           _Section(
-            icon: Icons.cloud_download_outlined,
+            icon: Icons.archive_outlined,
             title: 'Tạo bản sao lưu',
             body: 'Lưu dữ liệu quán, món, đơn hàng, ảnh món và cài đặt vào một tệp .dakbackup trên thiết bị.',
             child: FilledButton.icon(
@@ -63,7 +63,7 @@ class BackupScreen extends ConsumerWidget {
                       children: [
                         Text(
                           value?.selectedName ?? 'Bản sao lưu',
-                          style: const TextStyle(fontWeight: FontWeight.w800),
+                          style: const TextStyle(fontWeight: FontWeight.w700),
                         ),
                         const SizedBox(height: 6),
                         Text(
@@ -175,7 +175,7 @@ class _Section extends StatelessWidget {
           const SizedBox(height: 12),
           Text(
             title,
-            style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800),
+            style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: 6),
           Text(
