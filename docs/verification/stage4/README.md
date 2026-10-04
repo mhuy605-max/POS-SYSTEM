@@ -63,7 +63,7 @@ Final command results after the review pass:
 - `flutter test`: all 93 tests passed.
 - `flutter test integration_test/order_flow_test.dart -d emulator-5554`: 1 integration test passed on API 36.
 - `flutter build apk --debug`: succeeded; produced `build/app/outputs/flutter-apk/app-debug.apk`.
-- The final APK installed successfully and `com.example.dakao_in_bill/.MainActivity` became the focused API 36 activity.
+- The final APK installed successfully and the then-temporary application ID's `.MainActivity` became the focused API 36 activity.
 
 An independent code review found concurrency, exception-normalization, and socket-lifecycle issues during the first pass. Those issues were corrected and the reviewer's final narrow re-check reported no remaining Critical, Important, or P2 findings.
 

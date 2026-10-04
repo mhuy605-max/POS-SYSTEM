@@ -1,6 +1,9 @@
 # Đakao In Bill
 
-Offline-first Android app for a Vietnamese food shop. This repository currently contains the **Stage 0 bootstrap only**: app entry point, Riverpod scope, router, theme seed, and five empty navigation destinations. It does not implement orders, SQLite tables, revenue, backup or printing yet.
+Offline-first Android point-of-sale app for a Vietnamese food shop. The V1
+production candidate includes catalog management, sales and order workflows,
+revenue reporting, Bluetooth receipt printing, settings, and local
+backup/restore.
 
 ## Development
 
@@ -16,7 +19,10 @@ flutter run -d emulator-5554
 
 On the configured Windows workstation, Flutter is installed at `C:\Users\ACER\develop\flutter`, Android SDK at `%LOCALAPPDATA%\Android\Sdk`, and Java at `C:\Program Files\Java\jdk-21.0.11`. User PATH, ANDROID_HOME and JAVA_HOME are configured. Restart existing terminals/IDEs to inherit them.
 
-The Android application ID is temporarily `com.example.dakao_in_bill`; select a permanent ID before release signing. Android minimum API 24 follows this Flutter version; confirm the shop phone before release. The scaffold's release signing is still Flutter's debug default, so no production release is prepared.
+The permanent Android application ID is `com.dakao.inbill`, and the V1
+candidate version is `1.0.0+1`. Android minimum API 24 follows this Flutter
+version. The current release build still uses debug signing for candidate
+validation, so it is not the final distributable V1 artifact.
 
 ## Project references
 
@@ -24,6 +30,10 @@ The Android application ID is temporarily `com.example.dakao_in_bill`; select a 
 - [Implementation plan](docs/superpowers/plans/2026-09-30-dakao-in-bill.md)
 - [Dependency review](docs/verification/dependencies.md)
 
-`feature/full-pos` is the production-candidate development line. Create `debug/mp58n` when physical printer testing starts. MP-58N compatibility remains **hardware-unverified**.
+`feature/full-pos` is the production-candidate development line. Stage 7B on
+`debug/mp58n` physically verified the accepted 384-dot receipt profile on the
+tested MP-58N. This result does not claim compatibility with other printer
+models or untested MP-58N revisions; see the
+[Stage 7B verification record](docs/verification/stage7b/README.md).
 
-The approved Stitch reference is still needed before product UI work; the current shell is not a recreation of that prototype. Stage 1 requires a passed Stage 0 gate and a subsequent instruction to proceed.
+The production UI follows the approved Stitch reference and UI + Motion V2.1.

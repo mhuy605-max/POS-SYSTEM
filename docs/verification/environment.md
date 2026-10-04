@@ -29,7 +29,7 @@ Android SDK licenses accepted through sdkmanager. Full Android Studio was not in
 - Static analysis: PASS, no issues.
 - Scaffold widget test: PASS, 1 test covers brand and navigation through all five destinations. Recorded expected red result against the original counter scaffold first.
 - Debug APK build: PASS (`flutter --verbose build apk --debug --no-pub`), exit 0, BUILD SUCCESSFUL in 55s using the verified local engine mirror described above; all three default ABIs included.
-- Emulator app launch: PASS. `adb install -r` returned Success; `am start -W -n com.example.dakao_in_bill/.MainActivity` returned Status: ok, LaunchState: COLD, TotalTime: 5677 ms. UI hierarchy and screenshot confirm the brand, Bán hàng destination, and all five navigation tabs on API 36. See [launch screenshot](stage0-emulator.png).
+- Emulator app launch: PASS. `adb install -r` returned Success; launching the then-temporary application ID's `.MainActivity` returned Status: ok, LaunchState: COLD, TotalTime: 5677 ms. UI hierarchy and screenshot confirm the brand, Bán hàng destination, and all five navigation tabs on API 36. See [launch screenshot](stage0-emulator.png).
 - Flutter Doctor: Android toolchain and licenses pass; refreshed-PATH run passes Flutter and Android. Its only warning is the unrelated incomplete Windows desktop Visual Studio installation.
 
 - Formatting: PASS (`dart format --output=none --set-exit-if-changed lib test`).
@@ -47,6 +47,6 @@ Local detailed logs are retained in `.superpowers/sdd/2026-09-30-dakao-in-bill/`
 
 Only Stage 0 shell/configuration is implemented. No database/schema, business logic, sales, printing, revenue or backup implementation. Native Kotlin transport and narrow ESC/POS encoding were selected for Stage 4 after the package source gate failed; see dependencies.md.
 
-Temporary application ID: `com.example.dakao_in_bill`. Permanent ID and release signing remain release prerequisites. The Flutter-generated release configuration still uses debug signing; this is not a production release.
+Stage 0 used a temporary template application ID. Permanent identity and release signing remained later release prerequisites. The Flutter-generated release configuration used debug signing; that artifact was not a production release.
 
 Stitch reference and shop phone model/Android version remain needed before their dependent UI/device acceptance stages. Current destinations are empty bootstrap screens, not approved prototype reproductions. MP-58N hardware compatibility is unverified.
