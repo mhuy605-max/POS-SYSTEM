@@ -91,3 +91,29 @@ The accepted checks covered:
 The Đakao In Bill V1 feature scope is frozen at this accepted candidate. Final
 distribution still requires permanent production signing and one installation
 and MP-58N smoke print of the permanently signed APK before tagging V1.0.0.
+
+## Final signed release acceptance
+
+**FINAL SIGNED RELEASE ACCEPTANCE: PASS**
+
+The permanently signed V1.0.0 APK completed final real-device acceptance:
+
+- installation on the real Android device: PASS;
+- production startup: PASS;
+- normal production workflow: PASS;
+- connection to the physically tested MP-58N: PASS; and
+- final real MP-58N smoke-print receipt: PASS.
+
+Release identity and artifact record:
+
+- Application: `Đakao In Bill`
+- Application ID: `com.dakao.inbill`
+- Version: `1.0.0` (`versionCode` 1)
+- Accepted APK SHA-256:
+  `EE59873556ABF1214134BBEDFCB28D5D10886643913A3FF84BE1ABDC0AAF7274`
+- Signing certificate SHA-256:
+  `E68967BE8610C0735A0DA3187968F334A09F248136566305BE10804CCDF91616`
+
+The V1 feature scope remains frozen. The owner confirmed that the permanent
+signing key is backed up outside the repository. No password, private key, or
+other secret key material is recorded here or tracked by Git.
