@@ -52,7 +52,7 @@ void main() {
       expect(first.bytes, second.bytes);
       expect(first.manifest.magic, BackupManifest.magicValue);
       expect(first.manifest.formatVersion, 1);
-      expect(first.manifest.schemaVersion, 1);
+      expect(first.manifest.schemaVersion, database.schemaVersion);
       expect(first.manifest.appVersion, '0.1.0+1');
       expect(first.manifest.createdAtUtc, '2026-10-02T06:30:00.000Z');
 

@@ -216,6 +216,7 @@ final class OrderRepository {
                 orderId: orderId,
                 productId: Value(line.source.productId),
                 productNameSnapshot: line.source.reviewedName.trim(),
+                baseUnitPriceSnapshot: Value(line.source.reviewedUnitPrice),
                 unitPriceSnapshot: line.source.reviewedUnitPrice,
                 quantity: line.quantity,
                 note: Value(line.source.note),

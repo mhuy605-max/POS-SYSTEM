@@ -317,7 +317,8 @@ Future<dynamic> _validatedSource(AppDatabase database, Directory files) async {
     nowUtc: () => DateTime.utc(2026, 10, 2),
     appVersion: '0.1.0+1',
   ).createArchive();
-  return const BackupValidator(schemaVersion: 1).validateBytes(staged.bytes);
+  return BackupValidator(schemaVersion: database.schemaVersion)
+      .validateBytes(staged.bytes);
 }
 
 Future<void> _populateSource(AppDatabase db, Directory files) async {

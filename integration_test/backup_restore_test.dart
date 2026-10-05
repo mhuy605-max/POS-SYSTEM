@@ -100,7 +100,7 @@ void main() {
       nowUtc: () => DateTime.utc(2026, 10, 2),
       appVersion: '0.1.0+1',
     ).createArchive();
-    final validated = const BackupValidator(schemaVersion: 1)
+    final validated = BackupValidator(schemaVersion: database.schemaVersion)
         .validateBytes(staged.bytes);
 
     await (database.delete(database.orderItems)).go();
