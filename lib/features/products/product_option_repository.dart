@@ -2,7 +2,8 @@ import 'package:drift/drift.dart';
 
 import '../../core/money.dart';
 import '../../data/app_database.dart';
-import '../orders/order_repository.dart' show EpochClock;
+
+typedef ProductOptionClock = int Function();
 
 final class CatalogOptionItem {
   const CatalogOptionItem({
@@ -72,7 +73,7 @@ final class ProductOptionRepository {
   ProductOptionRepository(this._database, this._nowEpochMillis);
 
   final AppDatabase _database;
-  final EpochClock _nowEpochMillis;
+  final ProductOptionClock _nowEpochMillis;
 
   Future<List<CatalogOptionGroup>> listGroups({bool includeInactive = true}) {
     return _loadGroups(

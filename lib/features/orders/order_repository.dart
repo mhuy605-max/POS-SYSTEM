@@ -4,10 +4,27 @@ import 'package:drift/drift.dart';
 
 import '../../core/money.dart';
 import '../../data/app_database.dart';
+import '../products/product_option_repository.dart';
 
 enum OrderStatus { unpaid, paid, cancelled }
 
 enum OrderType { dineIn, takeaway }
+
+final class DraftSelectedOption {
+  const DraftSelectedOption({
+    required this.optionItemId,
+    required this.optionGroupId,
+    required this.reviewedGroupName,
+    required this.reviewedOptionName,
+    required this.reviewedPriceDelta,
+  });
+
+  final int optionItemId;
+  final int optionGroupId;
+  final String reviewedGroupName;
+  final String reviewedOptionName;
+  final int reviewedPriceDelta;
+}
 
 final class DraftLine {
   const DraftLine({
@@ -15,14 +32,20 @@ final class DraftLine {
     required this.reviewedName,
     required this.reviewedUnitPrice,
     required this.quantity,
+    this.reviewedBaseUnitPrice,
+    this.selectedOptions = const [],
     this.note,
   });
 
   final int? productId;
   final String reviewedName;
+  final int? reviewedBaseUnitPrice;
   final int reviewedUnitPrice;
   final num quantity;
+  final List<DraftSelectedOption> selectedOptions;
   final String? note;
+
+  int get reviewedBasePrice => reviewedBaseUnitPrice ?? reviewedUnitPrice;
 }
 
 final class OrderDraft {
@@ -79,6 +102,24 @@ final class ReceiptSettingsSnapshot {
   });
 }
 
+final class SavedOrderOption {
+  const SavedOrderOption({
+    required this.id,
+    required this.optionItemId,
+    required this.groupName,
+    required this.optionName,
+    required this.priceDelta,
+    required this.displayOrder,
+  });
+
+  final int id;
+  final int? optionItemId;
+  final String groupName;
+  final String optionName;
+  final int priceDelta;
+  final int displayOrder;
+}
+
 final class SavedOrderItem {
   const SavedOrderItem({
     required this.id,
@@ -88,15 +129,19 @@ final class SavedOrderItem {
     required this.quantity,
     required this.note,
     required this.lineTotal,
-  });
+    int? baseUnitPrice,
+    this.options = const [],
+  }) : baseUnitPrice = baseUnitPrice ?? unitPrice;
 
   final int id;
   final int? productId;
   final String productName;
+  final int baseUnitPrice;
   final int unitPrice;
   final int quantity;
   final String? note;
   final int lineTotal;
+  final List<SavedOrderOption> options;
 }
 
 final class SavedOrder {
@@ -134,10 +179,18 @@ final class SavedOrder {
 typedef EpochClock = int Function();
 
 final class OrderRepository {
-  OrderRepository(this._database, {required this._nowEpochMillis});
+  OrderRepository(
+    this._database, {
+    required EpochClock nowEpochMillis,
+    ProductOptionRepository? productOptionRepository,
+  }) : _nowEpochMillis = nowEpochMillis,
+       _productOptions =
+           productOptionRepository ??
+           ProductOptionRepository(_database, nowEpochMillis);
 
   final AppDatabase _database;
   final EpochClock _nowEpochMillis;
+  final ProductOptionRepository _productOptions;
 
   Future<int> createOrder(OrderDraft draft) {
     return _database.transaction(() async {
@@ -158,20 +211,51 @@ final class OrderRepository {
       }
 
       var subtotal = 0;
-      final checkedLines = <({DraftLine source, int quantity, int total})>[];
+      final checkedLines =
+          <
+            ({
+              DraftLine source,
+              int quantity,
+              int baseUnitPrice,
+              int configuredUnitPrice,
+              int total,
+              List<ResolvedProductOption> options,
+            })
+          >[];
       for (final line in draft.lines) {
         final name = line.reviewedName.trim();
         if (name.isEmpty) {
           throw const DomainValidationException('Product name is required.');
         }
+        final baseUnitPrice = line.reviewedBasePrice;
+        await _verifyReviewedProduct(line, name, baseUnitPrice);
+        final resolvedOptions = await _validateSelectedOptions(line);
+        var configuredUnitPrice = baseUnitPrice;
+        for (final option in resolvedOptions) {
+          configuredUnitPrice = checkedMoneySum(
+            configuredUnitPrice,
+            option.priceDelta,
+          );
+        }
+        if (line.reviewedUnitPrice != configuredUnitPrice) {
+          throw const DomainValidationException(
+            'Configured price changed after review; review the order again.',
+          );
+        }
         final lineTotal = checkedLineTotal(
-          unitPrice: line.reviewedUnitPrice,
+          unitPrice: configuredUnitPrice,
           quantity: line.quantity,
         );
         subtotal = checkedMoneySum(subtotal, lineTotal);
         final quantity = line.quantity as int;
-        await _verifyReviewedProduct(line, name);
-        checkedLines.add((source: line, quantity: quantity, total: lineTotal));
+        checkedLines.add((
+          source: line,
+          quantity: quantity,
+          baseUnitPrice: baseUnitPrice,
+          configuredUnitPrice: configuredUnitPrice,
+          total: lineTotal,
+          options: resolvedOptions,
+        ));
       }
 
       final maxRow = await _database
@@ -209,20 +293,35 @@ final class OrderRepository {
           );
 
       for (final line in checkedLines) {
-        await _database
+        final orderItemId = await _database
             .into(_database.orderItems)
             .insert(
               OrderItemsCompanion.insert(
                 orderId: orderId,
                 productId: Value(line.source.productId),
                 productNameSnapshot: line.source.reviewedName.trim(),
-                baseUnitPriceSnapshot: Value(line.source.reviewedUnitPrice),
-                unitPriceSnapshot: line.source.reviewedUnitPrice,
+                baseUnitPriceSnapshot: Value(line.baseUnitPrice),
+                unitPriceSnapshot: line.configuredUnitPrice,
                 quantity: line.quantity,
                 note: Value(line.source.note),
                 lineTotal: line.total,
               ),
             );
+        for (var index = 0; index < line.options.length; index++) {
+          final option = line.options[index];
+          await _database
+              .into(_database.orderItemOptions)
+              .insert(
+                OrderItemOptionsCompanion.insert(
+                  orderItemId: orderItemId,
+                  optionItemId: Value(option.optionItemId),
+                  groupNameSnapshot: option.groupName,
+                  optionNameSnapshot: option.optionName,
+                  priceDeltaSnapshot: option.priceDelta,
+                  displayOrder: index,
+                ),
+              );
+        }
       }
       return orderId;
     });
@@ -231,9 +330,15 @@ final class OrderRepository {
   Future<void> _verifyReviewedProduct(
     DraftLine line,
     String reviewedName,
+    int reviewedBaseUnitPrice,
   ) async {
     final productId = line.productId;
     if (productId == null) {
+      if (line.selectedOptions.isNotEmpty) {
+        throw const DomainValidationException(
+          'Selected options require a current product.',
+        );
+      }
       return;
     }
     final product = await (_database.select(
@@ -243,11 +348,43 @@ final class OrderRepository {
         product.deletedAt != null ||
         !product.isAvailable ||
         product.name != reviewedName ||
-        product.price != line.reviewedUnitPrice) {
+        product.price != reviewedBaseUnitPrice) {
       throw const DomainValidationException(
         'Product changed after review; review the order again.',
       );
     }
+  }
+
+  Future<List<ResolvedProductOption>> _validateSelectedOptions(
+    DraftLine line,
+  ) async {
+    if (line.selectedOptions.isEmpty) return const [];
+    final productId = line.productId;
+    if (productId == null) {
+      throw const DomainValidationException(
+        'Selected options require a current product.',
+      );
+    }
+    final resolved = await _productOptions.resolveSelectableOptions(
+      productId,
+      line.selectedOptions.map((option) => option.optionItemId).toList(),
+    );
+    final reviewedById = <int, DraftSelectedOption>{
+      for (final option in line.selectedOptions) option.optionItemId: option,
+    };
+    for (final current in resolved) {
+      final reviewed = reviewedById[current.optionItemId];
+      if (reviewed == null ||
+          reviewed.optionGroupId != current.groupId ||
+          reviewed.reviewedGroupName != current.groupName ||
+          reviewed.reviewedOptionName != current.optionName ||
+          reviewed.reviewedPriceDelta != current.priceDelta) {
+        throw const DomainValidationException(
+          'Option changed after review; review the order again.',
+        );
+      }
+    }
+    return resolved;
   }
 
   Future<SavedOrder> loadOrder(int id) async {
@@ -259,6 +396,33 @@ final class OrderRepository {
               ..where((row) => row.orderId.equals(id))
               ..orderBy([(row) => OrderingTerm.asc(row.id)]))
             .get();
+    final optionRows = itemRows.isEmpty
+        ? const <OrderItemOption>[]
+        : await (_database.select(_database.orderItemOptions)
+                ..where(
+                  (row) =>
+                      row.orderItemId.isIn(itemRows.map((item) => item.id)),
+                )
+                ..orderBy([
+                  (row) => OrderingTerm.asc(row.displayOrder),
+                  (row) => OrderingTerm.asc(row.id),
+                ]))
+              .get();
+    final optionsByItem = <int, List<SavedOrderOption>>{};
+    for (final option in optionRows) {
+      optionsByItem
+          .putIfAbsent(option.orderItemId, () => <SavedOrderOption>[])
+          .add(
+            SavedOrderOption(
+              id: option.id,
+              optionItemId: option.optionItemId,
+              groupName: option.groupNameSnapshot,
+              optionName: option.optionNameSnapshot,
+              priceDelta: option.priceDeltaSnapshot,
+              displayOrder: option.displayOrder,
+            ),
+          );
+    }
 
     return SavedOrder(
       id: order.id,
@@ -281,10 +445,14 @@ final class OrderRepository {
               id: item.id,
               productId: item.productId,
               productName: item.productNameSnapshot,
+              baseUnitPrice: item.baseUnitPriceSnapshot,
               unitPrice: item.unitPriceSnapshot,
               quantity: item.quantity,
               note: item.note,
               lineTotal: item.lineTotal,
+              options: List<SavedOrderOption>.unmodifiable(
+                optionsByItem[item.id] ?? const [],
+              ),
             ),
           )
           .toList(growable: false),
