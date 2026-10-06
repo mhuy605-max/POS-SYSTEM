@@ -280,6 +280,9 @@ void main() {
         ]) {
           expect(await rows('SELECT * FROM $table'), isEmpty);
         }
+        expect(await rows('PRAGMA foreign_keys'), [
+          {'foreign_keys': 1},
+        ]);
         expect(await rows('PRAGMA foreign_key_check'), isEmpty);
       },
       options: const ValidationOptions(validateDropped: true),
