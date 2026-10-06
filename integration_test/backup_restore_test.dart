@@ -83,6 +83,7 @@ void main() {
               orderId: entry.$2,
               productId: const Value(20),
               productNameSnapshot: 'Cơm tấm lịch sử',
+              baseUnitPriceSnapshot: const Value(45000),
               unitPriceSnapshot: 45000,
               quantity: 1,
               lineTotal: 45000,

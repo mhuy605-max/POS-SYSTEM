@@ -5,6 +5,7 @@ import 'package:archive/archive.dart';
 import 'package:crypto/crypto.dart';
 import 'package:image/image.dart' as image;
 
+import 'backup_canonical_upgrader.dart';
 import 'backup_models.dart';
 
 final class BackupValidator {
@@ -88,7 +89,12 @@ final class BackupValidator {
     if (manifest.formatVersion != 1) {
       throw const BackupValidationException('Backup version is unsupported.');
     }
-    if (manifest.schemaVersion != schemaVersion) {
+    final supportedSchema = switch (schemaVersion) {
+      1 => manifest.schemaVersion == 1,
+      2 => manifest.schemaVersion == 1 || manifest.schemaVersion == 2,
+      _ => false,
+    };
+    if (!supportedSchema) {
       throw const BackupValidationException('Database schema is incompatible.');
     }
     final createdAt = DateTime.tryParse(manifest.createdAtUtc);
@@ -134,10 +140,16 @@ final class BackupValidator {
       verifiedBytes[metadata.key] = content;
     }
 
-    final canonicalData = verifiedBytes['data.json']!;
-    final data = _decodeMap(canonicalData, 'data.json');
-    final tables = _validateTables(data);
-    final imagePaths = _validateBusinessData(tables);
+    final sourceData = _decodeMap(verifiedBytes['data.json']!, 'data.json');
+    final sourceTables = _validateTables(sourceData, manifest.schemaVersion);
+    _validateBusinessData(sourceTables, manifest.schemaVersion);
+
+    final data = manifest.schemaVersion == 1 && schemaVersion == 2
+        ? BackupCanonicalUpgrader.v1ToV2(sourceData)
+        : sourceData;
+    final canonicalData = Uint8List.fromList(utf8.encode(jsonEncode(data)));
+    final tables = _validateTables(data, schemaVersion);
+    final imagePaths = _validateBusinessData(tables, schemaVersion);
     final images = <String, Uint8List>{};
     for (final path in imagePaths) {
       _requireSafeImagePath(path);
@@ -180,12 +192,15 @@ final class BackupValidator {
     );
   }
 
-  Map<String, List<Object?>> _validateTables(Map<String, Object?> data) {
+  Map<String, List<Object?>> _validateTables(
+    Map<String, Object?> data,
+    int payloadSchemaVersion,
+  ) {
     if (data.keys.length != 1 || data['tables'] is! Map<String, Object?>) {
       throw const BackupValidationException('Data root is invalid.');
     }
     final raw = data['tables']! as Map<String, Object?>;
-    const names = <String>{
+    const v1Names = <String>{
       'categories',
       'products',
       'orders',
@@ -193,6 +208,20 @@ final class BackupValidator {
       'print_attempts',
       'app_settings',
       'printer_settings',
+    };
+    const v2Names = <String>{
+      ...v1Names,
+      'option_groups',
+      'option_items',
+      'product_option_groups',
+      'order_item_options',
+    };
+    final names = switch (payloadSchemaVersion) {
+      1 => v1Names,
+      2 => v2Names,
+      _ => throw const BackupValidationException(
+        'Database schema is incompatible.',
+      ),
     };
     if (raw.keys.length != names.length ||
         !raw.keys.toSet().containsAll(names)) {
@@ -204,7 +233,10 @@ final class BackupValidator {
     };
   }
 
-  Set<String> _validateBusinessData(Map<String, List<Object?>> tables) {
+  Set<String> _validateBusinessData(
+    Map<String, List<Object?>> tables,
+    int payloadSchemaVersion,
+  ) {
     final categoryIds = _validateRows(
       tables['categories']!,
       'categories',
@@ -259,6 +291,71 @@ final class BackupValidator {
         _nullableInt(row, 'deleted_at');
       },
     );
+    var optionGroupIds = <int>{};
+    var optionItemIds = <int>{};
+    if (payloadSchemaVersion == 2) {
+      optionGroupIds = _validateRows(
+        tables['option_groups']!,
+        'option_groups',
+        const {
+          'id',
+          'name',
+          'sort_order',
+          'is_active',
+          'created_at',
+          'updated_at',
+        },
+        (row) {
+          _positiveInt(row, 'id');
+          _nonBlank(row, 'name');
+          _int(row, 'sort_order');
+          _bool(row, 'is_active');
+          _int(row, 'created_at');
+          _int(row, 'updated_at');
+        },
+      );
+      optionItemIds = _validateRows(
+        tables['option_items']!,
+        'option_items',
+        const {
+          'id',
+          'group_id',
+          'name',
+          'price_delta',
+          'sort_order',
+          'is_active',
+          'created_at',
+          'updated_at',
+        },
+        (row) {
+          _positiveInt(row, 'id');
+          if (!optionGroupIds.contains(_positiveInt(row, 'group_id'))) {
+            _invalid('option group_id');
+          }
+          _nonBlank(row, 'name');
+          if (_int(row, 'price_delta') < 0) _invalid('price_delta');
+          _int(row, 'sort_order');
+          _bool(row, 'is_active');
+          _int(row, 'created_at');
+          _int(row, 'updated_at');
+        },
+      );
+      final attachments = <(int, int)>{};
+      _validateRowsWithoutId(
+        tables['product_option_groups']!,
+        'product_option_groups',
+        const {'product_id', 'option_group_id'},
+        (row) {
+          final productId = _positiveInt(row, 'product_id');
+          final groupId = _positiveInt(row, 'option_group_id');
+          if (!productIds.contains(productId) ||
+              !optionGroupIds.contains(groupId) ||
+              !attachments.add((productId, groupId))) {
+            _invalid('product option group');
+          }
+        },
+      );
+    }
     final orderNumbers = <int>{};
     final tokens = <String>{};
     final orderTotals = <int, int>{};
@@ -318,21 +415,24 @@ final class BackupValidator {
       },
     );
     final itemSums = <int, int>{};
-    _validateRows(
+    final itemBasePrices = <int, int>{};
+    final itemEffectivePrices = <int, int>{};
+    final itemIds = _validateRows(
       tables['order_items']!,
       'order_items',
-      const {
+      <String>{
         'id',
         'order_id',
         'product_id',
         'product_name_snapshot',
+        if (payloadSchemaVersion == 2) 'base_unit_price_snapshot',
         'unit_price_snapshot',
         'quantity',
         'note',
         'line_total',
       },
       (row) {
-        _positiveInt(row, 'id');
+        final itemId = _positiveInt(row, 'id');
         final orderId = _positiveInt(row, 'order_id');
         if (!orderIds.contains(orderId)) _invalid('order_id');
         final productId = _nullableInt(row, 'product_id');
@@ -341,15 +441,65 @@ final class BackupValidator {
         }
         _nonBlank(row, 'product_name_snapshot');
         final price = _int(row, 'unit_price_snapshot');
+        final basePrice = payloadSchemaVersion == 2
+            ? _int(row, 'base_unit_price_snapshot')
+            : price;
         final quantity = _int(row, 'quantity');
         final lineTotal = _int(row, 'line_total');
-        if (price < 0 || quantity <= 0 || lineTotal != price * quantity) {
+        if (basePrice < 0 ||
+            price < 0 ||
+            quantity <= 0 ||
+            lineTotal != price * quantity) {
           _invalid('line_total');
         }
+        itemBasePrices[itemId] = basePrice;
+        itemEffectivePrices[itemId] = price;
         _nullableString(row, 'note');
         itemSums[orderId] = (itemSums[orderId] ?? 0) + lineTotal;
       },
     );
+    if (payloadSchemaVersion == 2) {
+      final optionDeltas = <int, int>{};
+      final displayOrders = <int, Set<int>>{};
+      _validateRows(
+        tables['order_item_options']!,
+        'order_item_options',
+        const {
+          'id',
+          'order_item_id',
+          'option_item_id',
+          'group_name_snapshot',
+          'option_name_snapshot',
+          'price_delta_snapshot',
+          'display_order',
+        },
+        (row) {
+          _positiveInt(row, 'id');
+          final itemId = _positiveInt(row, 'order_item_id');
+          if (!itemIds.contains(itemId)) _invalid('option order_item_id');
+          final optionItemId = _nullableInt(row, 'option_item_id');
+          if (optionItemId != null && !optionItemIds.contains(optionItemId)) {
+            _invalid('option_item_id');
+          }
+          _nonBlank(row, 'group_name_snapshot');
+          _nonBlank(row, 'option_name_snapshot');
+          final delta = _int(row, 'price_delta_snapshot');
+          if (delta < 0) _invalid('price_delta_snapshot');
+          final displayOrder = _int(row, 'display_order');
+          if (displayOrder < 0 ||
+              !(displayOrders[itemId] ??= <int>{}).add(displayOrder)) {
+            _invalid('display_order');
+          }
+          optionDeltas[itemId] = (optionDeltas[itemId] ?? 0) + delta;
+        },
+      );
+      for (final itemId in itemIds) {
+        if (itemEffectivePrices[itemId] !=
+            itemBasePrices[itemId]! + (optionDeltas[itemId] ?? 0)) {
+          _invalid('configured unit price');
+        }
+      }
+    }
     for (final entry in orderTotals.entries) {
       if ((itemSums[entry.key] ?? 0) != entry.value) _invalid('order item sum');
     }
@@ -483,6 +633,22 @@ Set<int> _validateRows(
     }
   }
   return ids;
+}
+
+void _validateRowsWithoutId(
+  List<Object?> rows,
+  String name,
+  Set<String> keys,
+  void Function(Map<String, Object?>) validate,
+) {
+  for (final value in rows) {
+    if (value is! Map<String, Object?> ||
+        value.keys.length != keys.length ||
+        !value.keys.toSet().containsAll(keys)) {
+      throw BackupValidationException('Invalid row in $name.');
+    }
+    validate(value);
+  }
 }
 
 void _validateSingleton(
