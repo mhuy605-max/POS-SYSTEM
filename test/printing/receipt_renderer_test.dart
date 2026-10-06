@@ -256,7 +256,7 @@ void main() {
       );
 
       expect(long.heightDots, greaterThan(short.heightDots + 20));
-      expect(long.bytes.sublist(long.bytes.length - 3), [0x1b, 0x64, 0x04]);
+      expect(long.bytes.sublist(long.bytes.length - 3), [0x1b, 0x64, 0x06]);
       _expectPrintableMarginsClear(long);
     },
   );
@@ -277,9 +277,28 @@ void main() {
       expect(receipt.bytes.sublist(receipt.bytes.length - 3), [
         0x1b,
         0x64,
-        0x04,
+        0x06,
       ]);
       _expectPrintableMarginsClear(receipt);
+    },
+  );
+
+  test(
+    'zero-option and option receipts share one complete six-line final feed',
+    () async {
+      const renderer = ReceiptRenderer();
+      const footer = 'Cảm ơn quý khách\n\nHẹn gặp lại!';
+      final zeroOption = await renderer.renderOrder(_order(footer: footer));
+      final withOptions = await renderer.renderOrder(
+        _configuredOrder(footer: footer),
+      );
+
+      _expectRasterEndsWithFeed(zeroOption, lines: 6);
+      _expectRasterEndsWithFeed(withOptions, lines: 6);
+      expect(
+        zeroOption.bytes.sublist(zeroOption.bytes.length - 3),
+        withOptions.bytes.sublist(withOptions.bytes.length - 3),
+      );
     },
   );
 }
@@ -386,4 +405,22 @@ void _expectPrintableMarginsClear(RenderedReceipt receipt) {
     }
     offset += rowBytes * bandHeight;
   }
+}
+
+void _expectRasterEndsWithFeed(RenderedReceipt receipt, {required int lines}) {
+  final rowBytes = (receipt.widthDots + 7) ~/ 8;
+  var offset = 2; // ESC @
+  for (final bandHeight in receipt.bandHeights) {
+    expect(receipt.bytes.sublist(offset, offset + 4), [0x1d, 0x76, 0x30, 0x00]);
+    final encodedRowBytes =
+        receipt.bytes[offset + 4] | (receipt.bytes[offset + 5] << 8);
+    final encodedHeight =
+        receipt.bytes[offset + 6] | (receipt.bytes[offset + 7] << 8);
+    expect(encodedRowBytes, rowBytes);
+    expect(encodedHeight, bandHeight);
+    offset += 8 + (rowBytes * bandHeight);
+  }
+
+  expect(offset, receipt.bytes.length - 3);
+  expect(receipt.bytes.sublist(offset), [0x1b, 0x64, lines]);
 }

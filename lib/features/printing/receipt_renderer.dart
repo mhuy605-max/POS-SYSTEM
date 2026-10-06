@@ -301,7 +301,7 @@ class ReceiptRenderer {
       }
       output.add(raster);
     }
-    output.add(const <int>[0x1b, 0x64, 0x04]);
+    output.add(const <int>[0x1b, 0x64, 0x06]);
     return RenderedReceipt(
       bytes: output.takeBytes(),
       widthDots: widthDots,

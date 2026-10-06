@@ -122,7 +122,7 @@ void main() {
     expect(second.bytes, first.bytes);
     expect(second.widthDots, 384);
     expect(second.bandHeights.every((height) => height <= 160), true);
-    expect(second.bytes.sublist(second.bytes.length - 3), [0x1b, 0x64, 0x04]);
+    expect(second.bytes.sublist(second.bytes.length - 3), [0x1b, 0x64, 0x06]);
     expect(tester.takeException(), isNull);
 
     await tester.pumpWidget(const SizedBox.shrink());

@@ -130,7 +130,7 @@ void main() {
       expect(afterRaster.bytes.sublist(afterRaster.bytes.length - 3), [
         0x1b,
         0x64,
-        0x04,
+        0x06,
       ]);
     },
   );
