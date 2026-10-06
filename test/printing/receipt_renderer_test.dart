@@ -43,6 +43,7 @@ void main() {
     expect(ReceiptRenderer.orderTypeFontSize, 18.5);
     expect(ReceiptRenderer.itemNameFontSize, 25);
     expect(ReceiptRenderer.itemPriceFontSize, 20);
+    expect(ReceiptRenderer.itemOptionFontSize, 17.5);
     expect(ReceiptRenderer.itemNoteFontSize, 16);
     expect(ReceiptRenderer.grandTotalFontSize, 27);
     expect(ReceiptRenderer.footerFontSize, 18.5);
@@ -102,17 +103,199 @@ void main() {
     expect(large.heightDots, greaterThan(regular.heightDots + 20));
     _expectPrintableMarginsClear(large);
   });
+
+  test('zero-option V1 receipt remains byte-for-byte unchanged', () async {
+    const renderer = ReceiptRenderer();
+    final legacy = await renderer.renderOrder(_order());
+    final explicit = await renderer.renderOrder(
+      _order(baseUnitPrice: 95000, options: const []),
+    );
+
+    expect(explicit.bytes, legacy.bytes);
+    expect(explicit.heightDots, legacy.heightDots);
+  });
+
+  test(
+    'configured receipt renders base and historical option detail rows',
+    () async {
+      const renderer = ReceiptRenderer();
+      final zero = await renderer.renderOrder(
+        _order(unitPrice: 35000, baseUnitPrice: 35000, note: null),
+      );
+      final one = await renderer.renderOrder(
+        _order(
+          unitPrice: 80000,
+          baseUnitPrice: 35000,
+          note: null,
+          options: const [
+            SavedOrderOption(
+              id: 1,
+              optionItemId: 10,
+              groupName: 'Món thêm',
+              optionName: 'Sườn thêm',
+              priceDelta: 45000,
+              displayOrder: 0,
+            ),
+          ],
+        ),
+      );
+      final multiple = await renderer.renderOrder(_configuredOrder());
+
+      expect(one.heightDots, greaterThan(zero.heightDots + 20));
+      expect(multiple.heightDots, greaterThan(one.heightDots + 20));
+      _expectPrintableMarginsClear(one);
+      _expectPrintableMarginsClear(multiple);
+    },
+  );
+
+  test('zero-price and long Vietnamese option names render safely', () async {
+    const renderer = ReceiptRenderer();
+    final short = await renderer.renderOrder(
+      _order(
+        unitPrice: 35000,
+        baseUnitPrice: 35000,
+        note: null,
+        options: const [
+          SavedOrderOption(
+            id: 1,
+            optionItemId: 10,
+            groupName: 'Topping',
+            optionName: 'Hành phi',
+            priceDelta: 0,
+            displayOrder: 0,
+          ),
+        ],
+      ),
+    );
+    final long = await renderer.renderOrder(
+      _order(
+        unitPrice: 35000,
+        baseUnitPrice: 35000,
+        note: null,
+        options: const [
+          SavedOrderOption(
+            id: 1,
+            optionItemId: 10,
+            groupName: 'Topping',
+            optionName:
+                'Hành phi giòn đặc biệt kèm mỡ hành và nước sốt nhà làm',
+            priceDelta: 0,
+            displayOrder: 0,
+          ),
+        ],
+      ),
+    );
+
+    expect(long.heightDots, greaterThan(short.heightDots));
+    _expectPrintableMarginsClear(long);
+  });
+
+  test(
+    'quantity two keeps configured unit and line totals deterministic',
+    () async {
+      const renderer = ReceiptRenderer();
+      final once = await renderer.renderOrder(_configuredOrder(quantity: 1));
+      final twice = await renderer.renderOrder(_configuredOrder(quantity: 2));
+
+      expect(once.bytes, isNot(twice.bytes));
+      expect(once.widthDots, 384);
+      expect(twice.widthDots, 384);
+      _expectPrintableMarginsClear(twice);
+    },
+  );
+
+  test('LF, CRLF and bare CR footer endings normalize identically', () async {
+    const renderer = ReceiptRenderer();
+    final single = await renderer.renderOrder(_order(footer: 'cảm ơn'));
+    final lf = await renderer.renderOrder(
+      _order(footer: 'cảm ơn\nhẹn gặp lại'),
+    );
+    final crlf = await renderer.renderOrder(
+      _order(footer: 'cảm ơn\r\nhẹn gặp lại'),
+    );
+    final cr = await renderer.renderOrder(
+      _order(footer: 'cảm ơn\rhẹn gặp lại'),
+    );
+
+    expect(lf.heightDots, greaterThan(single.heightDots + 10));
+    expect(crlf.bytes, lf.bytes);
+    expect(cr.bytes, lf.bytes);
+    _expectPrintableMarginsClear(lf);
+  });
+
+  test('footer preserves internal blank lines and all later lines', () async {
+    const renderer = ReceiptRenderer();
+    final two = await renderer.renderOrder(
+      _order(footer: 'Cảm ơn quý khách\nHẹn gặp lại!'),
+    );
+    final blank = await renderer.renderOrder(
+      _order(footer: 'Cảm ơn quý khách\n\nHẹn gặp lại!'),
+    );
+    final three = await renderer.renderOrder(
+      _order(footer: 'Dòng một\nDòng hai\nDòng ba'),
+    );
+
+    expect(blank.heightDots, greaterThan(two.heightDots + 20));
+    expect(three.heightDots, greaterThan(two.heightDots + 10));
+    expect(blank.bytes, isNot(two.bytes));
+    _expectPrintableMarginsClear(blank);
+    _expectPrintableMarginsClear(three);
+  });
+
+  test(
+    'long Vietnamese footer wraps and final feed follows all raster bands',
+    () async {
+      const renderer = ReceiptRenderer();
+      final short = await renderer.renderOrder(_order(footer: 'Cảm ơn'));
+      final long = await renderer.renderOrder(
+        _order(
+          footer:
+              'Cảm ơn quý khách đã ghé Đakao, kính chúc quý khách ngon miệng '
+              'và hẹn gặp lại trong lần sau!',
+        ),
+      );
+
+      expect(long.heightDots, greaterThan(short.heightDots + 20));
+      expect(long.bytes.sublist(long.bytes.length - 3), [0x1b, 0x64, 0x04]);
+      _expectPrintableMarginsClear(long);
+    },
+  );
+
+  test(
+    'configured receipt with blank-line footer is safe at 384 dots',
+    () async {
+      const renderer = ReceiptRenderer();
+      final receipt = await renderer.renderOrder(
+        _configuredOrder(
+          quantity: 2,
+          footer: 'Cảm ơn quý khách\n\nHẹn gặp lại!',
+        ),
+      );
+
+      expect(receipt.widthDots, 384);
+      expect(receipt.bandHeights.every((height) => height <= 160), isTrue);
+      expect(receipt.bytes.sublist(receipt.bytes.length - 3), [
+        0x1b,
+        0x64,
+        0x04,
+      ]);
+      _expectPrintableMarginsClear(receipt);
+    },
+  );
 }
 
 SavedOrder _order({
   String productName = 'Cơm tấm Sườn Chả',
   int unitPrice = 95000,
+  int? baseUnitPrice,
   int quantity = 1,
   int? total,
   String shopName = 'Đakao',
   String address = '1 Đường Đinh Tiên Hoàng',
   String phone = '0900000000',
   String footer = 'Cảm ơn quý khách',
+  String? note = 'Ít mỡ',
+  List<SavedOrderOption> options = const [],
 }) {
   final lineTotal = unitPrice * quantity;
   return SavedOrder(
@@ -139,14 +322,46 @@ SavedOrder _order({
         id: 1,
         productId: 3,
         productName: productName,
+        baseUnitPrice: baseUnitPrice,
         unitPrice: unitPrice,
         quantity: quantity,
-        note: 'Ít mỡ',
+        note: note,
         lineTotal: lineTotal,
+        options: options,
       ),
     ],
   );
 }
+
+SavedOrder _configuredOrder({
+  int quantity = 1,
+  String footer = 'Cảm ơn quý khách',
+}) => _order(
+  productName: 'Cơm sườn',
+  baseUnitPrice: 35000,
+  unitPrice: 110000,
+  quantity: quantity,
+  footer: footer,
+  note: null,
+  options: const [
+    SavedOrderOption(
+      id: 1,
+      optionItemId: 10,
+      groupName: 'Món thêm',
+      optionName: 'Sườn thêm',
+      priceDelta: 45000,
+      displayOrder: 0,
+    ),
+    SavedOrderOption(
+      id: 2,
+      optionItemId: 11,
+      groupName: 'Món thêm',
+      optionName: 'Trứng thêm',
+      priceDelta: 30000,
+      displayOrder: 1,
+    ),
+  ],
+);
 
 void _expectPrintableMarginsClear(RenderedReceipt receipt) {
   const marginBytes = 2; // 16 dots on each side of a 384-dot receipt.

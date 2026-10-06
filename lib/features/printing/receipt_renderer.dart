@@ -30,6 +30,7 @@ class ReceiptRenderer {
   static const orderTypeFontSize = 18.5;
   static const itemNameFontSize = 25.0;
   static const itemPriceFontSize = 20.0;
+  static const itemOptionFontSize = 17.5;
   static const itemNoteFontSize = 16.0;
   static const grandTotalFontSize = 27.0;
   static const footerFontSize = 18.5;
@@ -39,6 +40,7 @@ class ReceiptRenderer {
 
   Future<RenderedReceipt> renderOrder(SavedOrder order) {
     final settings = order.receiptSettings;
+    final footerBlocks = _footerBlocks(settings.footer);
     final blocks = <_ReceiptBlock>[
       _ReceiptBlock(
         settings.shopName,
@@ -93,6 +95,21 @@ class ReceiptRenderer {
           itemPriceFontSize,
           FontWeight.w500,
         ),
+        if (item.options.isNotEmpty) ...[
+          _ReceiptBlock.price(
+            '  Cơ bản',
+            _detailPrice(item.baseUnitPrice, item.quantity),
+            itemOptionFontSize,
+            FontWeight.w500,
+          ),
+          for (final option in item.options)
+            _ReceiptBlock.price(
+              '  + ${option.optionName}',
+              _detailPrice(option.priceDelta, item.quantity),
+              itemOptionFontSize,
+              FontWeight.w500,
+            ),
+        ],
         if (item.note != null && item.note!.trim().isNotEmpty)
           _ReceiptBlock(
             'Ghi chú: ${item.note}',
@@ -107,14 +124,9 @@ class ReceiptRenderer {
         grandTotalFontSize,
         FontWeight.w800,
       ),
-      if (settings.footer.isNotEmpty) ...[
+      if (footerBlocks.isNotEmpty) ...[
         const _ReceiptBlock.separator(),
-        _ReceiptBlock(
-          settings.footer,
-          footerFontSize,
-          FontWeight.w600,
-          centered: true,
-        ),
+        ...footerBlocks,
       ],
     ];
     return _render(blocks);
@@ -151,6 +163,11 @@ class ReceiptRenderer {
       if (block.separator) {
         layouts.add(null);
         height += 18;
+        continue;
+      }
+      if (block.spacerHeight != null) {
+        layouts.add(null);
+        height += block.spacerHeight!;
         continue;
       }
       final left = _painter(block.text, block);
@@ -197,6 +214,10 @@ class ReceiptRenderer {
           Paint()..color = Colors.black,
         );
         y += 18;
+        continue;
+      }
+      if (block.spacerHeight != null) {
+        y += block.spacerHeight!;
         continue;
       }
       final left = layout!.left;
@@ -297,7 +318,8 @@ final class _ReceiptBlock {
     this.fontWeight, {
     this.centered = false,
   }) : rightText = null,
-       separator = false;
+       separator = false,
+       spacerHeight = null;
 
   const _ReceiptBlock.price(
     this.text,
@@ -305,6 +327,15 @@ final class _ReceiptBlock {
     this.fontSize,
     this.fontWeight,
   ) : centered = false,
+      separator = false,
+      spacerHeight = null;
+
+  const _ReceiptBlock.spacer(this.spacerHeight)
+    : text = '',
+      fontSize = 0,
+      fontWeight = FontWeight.w500,
+      centered = false,
+      rightText = null,
       separator = false;
 
   const _ReceiptBlock.separator()
@@ -313,7 +344,8 @@ final class _ReceiptBlock {
       fontWeight = FontWeight.w500,
       centered = false,
       rightText = null,
-      separator = true;
+      separator = true,
+      spacerHeight = null;
 
   final String text;
   final String? rightText;
@@ -321,6 +353,7 @@ final class _ReceiptBlock {
   final FontWeight fontWeight;
   final bool centered;
   final bool separator;
+  final double? spacerHeight;
 }
 
 final class _ReceiptBlockLayout {
@@ -350,4 +383,30 @@ String _dateTime(int epoch) {
   String two(int number) => number.toString().padLeft(2, '0');
   return '${two(value.hour)}:${two(value.minute)} • '
       '${two(value.day)}/${two(value.month)}/${value.year}';
+}
+
+String _detailPrice(int price, int quantity) =>
+    quantity == 1 ? formatVnd(price) : '${formatVnd(price)} × $quantity';
+
+List<_ReceiptBlock> _footerBlocks(String source) {
+  // TextPainter recognizes LF and CRLF as line breaks, but treats a bare CR
+  // as part of one line. Split normalized logical lines explicitly so pasted
+  // footer text behaves identically and blank paragraphs retain their height.
+  final normalized = source
+      .replaceAll('\r\n', '\n')
+      .replaceAll('\r', '\n')
+      .trim();
+  if (normalized.isEmpty) return const [];
+  return [
+    for (final line in normalized.split('\n'))
+      if (line.isEmpty)
+        const _ReceiptBlock.spacer(ReceiptRenderer.footerFontSize * 1.25 + 7)
+      else
+        _ReceiptBlock(
+          line,
+          ReceiptRenderer.footerFontSize,
+          FontWeight.w600,
+          centered: true,
+        ),
+  ];
 }
