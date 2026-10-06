@@ -94,6 +94,15 @@ final class ProductOptionRepository {
     return groups.single;
   }
 
+  Future<int> countProductsUsingGroup(int groupId) async {
+    await _requireGroup(groupId);
+    final count = _database.productOptionGroups.productId.count();
+    final query = _database.selectOnly(_database.productOptionGroups)
+      ..addColumns([count])
+      ..where(_database.productOptionGroups.optionGroupId.equals(groupId));
+    return (await query.getSingle()).read(count) ?? 0;
+  }
+
   Future<int> createGroup(String name) async {
     final checkedName = _checkedName(name, field: 'Option group name');
     return _database.transaction(() async {

@@ -213,6 +213,36 @@ final class ProductRepository {
     });
   }
 
+  Future<int> createProductWithOptionGroups(
+    ProductDraft draft,
+    List<int> optionGroupIds,
+  ) async {
+    final checked = await _validateDraft(draft);
+    _rejectDuplicateIds(optionGroupIds);
+    return _database.transaction(() async {
+      await _requireOptionGroups(optionGroupIds);
+      final maxOrder = await _maxValue('products', 'sort_order');
+      final now = _nowEpochMillis();
+      final productId = await _database
+          .into(_database.products)
+          .insert(
+            ProductsCompanion.insert(
+              categoryId: checked.categoryId,
+              name: checked.name,
+              description: Value(checked.description),
+              price: checked.price,
+              imagePath: Value(checked.imagePath),
+              isAvailable: Value(checked.isAvailable),
+              sortOrder: Value(maxOrder + 1),
+              createdAt: now,
+              updatedAt: now,
+            ),
+          );
+      await _replaceOptionGroups(productId, optionGroupIds);
+      return productId;
+    });
+  }
+
   Future<void> updateProduct(int id, ProductDraft draft) async {
     final checked = await _validateDraft(draft);
     final changed =
@@ -232,6 +262,68 @@ final class ProductRepository {
     if (changed != 1) {
       throw StateError('Product $id does not exist.');
     }
+  }
+
+  Future<void> updateProductWithOptionGroups(
+    int id,
+    ProductDraft draft,
+    List<int> optionGroupIds,
+  ) async {
+    final checked = await _validateDraft(draft);
+    _rejectDuplicateIds(optionGroupIds);
+    await _database.transaction(() async {
+      await _requireOptionGroups(optionGroupIds);
+      final changed =
+          await (_database.update(
+            _database.products,
+          )..where((row) => row.id.equals(id) & row.deletedAt.isNull())).write(
+            ProductsCompanion(
+              categoryId: Value(checked.categoryId),
+              name: Value(checked.name),
+              description: Value(checked.description),
+              price: Value(checked.price),
+              imagePath: Value(checked.imagePath),
+              isAvailable: Value(checked.isAvailable),
+              updatedAt: Value(_nowEpochMillis()),
+            ),
+          );
+      if (changed != 1) throw StateError('Product $id does not exist.');
+      await _replaceOptionGroups(id, optionGroupIds);
+    });
+  }
+
+  /// Reorders every visible product while preserving the sort-order slots held
+  /// by soft-deleted products.
+  Future<void> reorderVisibleProducts(List<int> productIds) {
+    return _database.transaction(() async {
+      _rejectDuplicateIds(productIds);
+      final rows =
+          await (_database.select(_database.products)..orderBy([
+                (row) => OrderingTerm.asc(row.sortOrder),
+                (row) => OrderingTerm.asc(row.id),
+              ]))
+              .get();
+      final visible = rows.where((row) => row.deletedAt == null).toList();
+      final visibleIds = visible.map((row) => row.id).toSet();
+      if (productIds.length != visible.length ||
+          !visibleIds.containsAll(productIds)) {
+        throw const DomainValidationException(
+          'Reorder must contain every current product exactly once.',
+        );
+      }
+      final slots = visible.map((row) => row.sortOrder).toList();
+      final now = _nowEpochMillis();
+      for (var index = 0; index < productIds.length; index++) {
+        await (_database.update(
+          _database.products,
+        )..where((row) => row.id.equals(productIds[index]))).write(
+          ProductsCompanion(
+            sortOrder: Value(slots[index]),
+            updatedAt: Value(now),
+          ),
+        );
+      }
+    });
   }
 
   Future<void> setProductAvailability(int id, bool isAvailable) async {
@@ -293,6 +385,34 @@ final class ProductRepository {
     );
   }
 
+  Future<void> _requireOptionGroups(List<int> groupIds) async {
+    if (groupIds.isEmpty) return;
+    final rows = await (_database.select(
+      _database.optionGroups,
+    )..where((row) => row.id.isIn(groupIds))).get();
+    if (rows.length != groupIds.length) {
+      throw const DomainValidationException(
+        'One or more option groups no longer exist.',
+      );
+    }
+  }
+
+  Future<void> _replaceOptionGroups(int productId, List<int> groupIds) async {
+    await (_database.delete(
+      _database.productOptionGroups,
+    )..where((row) => row.productId.equals(productId))).go();
+    for (final groupId in groupIds) {
+      await _database
+          .into(_database.productOptionGroups)
+          .insert(
+            ProductOptionGroupsCompanion.insert(
+              productId: productId,
+              optionGroupId: groupId,
+            ),
+          );
+    }
+  }
+
   Future<int> _maxValue(String table, String column) async {
     final row = await _database
         .customSelect('SELECT MAX($column) AS maximum FROM $table')
@@ -336,4 +456,10 @@ String _checkedName(String value, {required String field}) {
 String? _trimmedOrNull(String? value) {
   final result = value?.trim();
   return result == null || result.isEmpty ? null : result;
+}
+
+void _rejectDuplicateIds(List<int> ids) {
+  if (ids.toSet().length != ids.length) {
+    throw const DomainValidationException('IDs cannot contain duplicates.');
+  }
 }

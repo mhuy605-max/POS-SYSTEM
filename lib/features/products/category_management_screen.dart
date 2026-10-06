@@ -8,7 +8,9 @@ import 'catalog_controller.dart';
 import 'product_repository.dart';
 
 class CategoryManagementScreen extends ConsumerStatefulWidget {
-  const CategoryManagementScreen({super.key});
+  const CategoryManagementScreen({this.embedded = false, super.key});
+
+  final bool embedded;
 
   @override
   ConsumerState<CategoryManagementScreen> createState() =>
@@ -86,98 +88,99 @@ class _CategoryManagementScreenState
   @override
   Widget build(BuildContext context) {
     final categories = ref.watch(categoryControllerProvider);
-    return Scaffold(
-      appBar: AppBar(title: const Text('Danh mục')),
-      body: categories.when(
-        loading: () => const AppLoadingState(label: 'Đang tải danh mục'),
-        error: (error, stack) => AppAsyncError(
-          message: 'Không thể tải danh mục.',
-          onRetry: () =>
-              ref.read(categoryControllerProvider.notifier).refresh(),
-        ),
-        data: (items) => ListView(
-          key: const Key('category-list'),
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-          children: [
-            _CategorySummary(items: items),
-            const SizedBox(height: 20),
-            const Text(
-              'Tạo danh mục mới',
-              style: TextStyle(fontWeight: FontWeight.w700),
-            ),
-            const SizedBox(height: 8),
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  child: TextField(
-                    key: const Key('new-category-name'),
-                    controller: _newCategoryController,
-                    textInputAction: TextInputAction.done,
-                    onSubmitted: (_) => _create(),
-                    decoration: const InputDecoration(
-                      hintText: 'Tên danh mục mới…',
-                      prefixIcon: Icon(Icons.playlist_add),
-                    ),
+    final body = categories.when(
+      loading: () => const AppLoadingState(label: 'Đang tải danh mục'),
+      error: (error, stack) => AppAsyncError(
+        message: 'Không thể tải danh mục.',
+        onRetry: () => ref.read(categoryControllerProvider.notifier).refresh(),
+      ),
+      data: (items) => ListView(
+        key: const Key('category-list'),
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+        children: [
+          _CategorySummary(items: items),
+          const SizedBox(height: 20),
+          const Text(
+            'Tạo danh mục mới',
+            style: TextStyle(fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: 8),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: TextField(
+                  key: const Key('new-category-name'),
+                  controller: _newCategoryController,
+                  textInputAction: TextInputAction.done,
+                  onSubmitted: (_) => _create(),
+                  decoration: const InputDecoration(
+                    hintText: 'Tên danh mục mới…',
+                    prefixIcon: Icon(Icons.playlist_add),
                   ),
-                ),
-                const SizedBox(width: 8),
-                FilledButton.icon(
-                  key: const Key('add-category'),
-                  onPressed: _busy ? null : _create,
-                  icon: const Icon(Icons.add),
-                  label: const Text('Thêm'),
-                ),
-              ],
-            ),
-            const SizedBox(height: 20),
-            const Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    'THỨ TỰ HIỂN THỊ',
-                    style: TextStyle(
-                      color: AppColors.secondaryInk,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
-                Text(
-                  'Giữ & kéo để xếp',
-                  style: TextStyle(color: AppColors.secondaryInk, fontSize: 11),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            ReorderableListView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              buildDefaultDragHandles: false,
-              itemCount: items.length,
-              onReorderItem: (oldIndex, newIndex) {
-                ref
-                    .read(categoryControllerProvider.notifier)
-                    .move(items[oldIndex].id, newIndex);
-              },
-              itemBuilder: (context, index) => Padding(
-                key: ValueKey(items[index].id),
-                padding: const EdgeInsets.only(bottom: 10),
-                child: _CategoryRow(
-                  category: items[index],
-                  index: index,
-                  onRename: () => _rename(items[index]),
-                  onActiveChanged: (value) => ref
-                      .read(categoryControllerProvider.notifier)
-                      .setActive(items[index].id, value),
                 ),
               ),
+              const SizedBox(width: 8),
+              FilledButton.icon(
+                key: const Key('add-category'),
+                onPressed: _busy ? null : _create,
+                icon: const Icon(Icons.add),
+                label: const Text('Thêm'),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          const Row(
+            children: [
+              Expanded(
+                child: Text(
+                  'THỨ TỰ HIỂN THỊ',
+                  style: TextStyle(
+                    color: AppColors.secondaryInk,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+              Text(
+                'Giữ & kéo để xếp',
+                style: TextStyle(color: AppColors.secondaryInk, fontSize: 11),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          ReorderableListView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            buildDefaultDragHandles: false,
+            itemCount: items.length,
+            onReorderItem: (oldIndex, newIndex) {
+              ref
+                  .read(categoryControllerProvider.notifier)
+                  .move(items[oldIndex].id, newIndex);
+            },
+            itemBuilder: (context, index) => Padding(
+              key: ValueKey(items[index].id),
+              padding: const EdgeInsets.only(bottom: 10),
+              child: _CategoryRow(
+                category: items[index],
+                index: index,
+                onRename: () => _rename(items[index]),
+                onActiveChanged: (value) => ref
+                    .read(categoryControllerProvider.notifier)
+                    .setActive(items[index].id, value),
+              ),
             ),
-            const SizedBox(height: 8),
-            const _CategoryRuleCallout(),
-          ],
-        ),
+          ),
+          const SizedBox(height: 8),
+          const _CategoryRuleCallout(),
+        ],
       ),
+    );
+    if (widget.embedded) return body;
+    return Scaffold(
+      appBar: AppBar(title: const Text('Danh mục')),
+      body: body,
     );
   }
 }

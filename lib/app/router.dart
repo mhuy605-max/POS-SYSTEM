@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 
 import '../features/products/category_management_screen.dart';
 import '../features/products/product_form_screen.dart';
+import '../features/products/option_management_screen.dart';
+import '../features/products/product_reorder_screen.dart';
 import '../features/products/products_screen.dart';
 import '../features/revenue/revenue_screen.dart';
 import '../features/orders/order_details_screen.dart';
@@ -93,6 +95,16 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/products/categories',
         builder: (context, state) => const CategoryManagementScreen(),
+      ),
+      GoRoute(
+        path: '/products/reorder',
+        builder: (context, state) => const ProductReorderScreen(),
+      ),
+      GoRoute(
+        path: '/products/options/:id',
+        builder: (context, state) => OptionGroupDetailScreen(
+          groupId: int.parse(state.pathParameters['id']!),
+        ),
       ),
     ],
   );

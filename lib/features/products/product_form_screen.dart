@@ -10,6 +10,7 @@ import '../../app/design_system.dart';
 import '../../app/theme.dart';
 import '../../core/money.dart';
 import 'catalog_controller.dart';
+import 'product_option_repository.dart';
 import 'product_repository.dart';
 
 class ProductFormScreen extends ConsumerStatefulWidget {
@@ -27,6 +28,8 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
   final _priceController = TextEditingController(text: '0');
   final _descriptionController = TextEditingController();
   List<CatalogCategory> _categories = const [];
+  List<CatalogOptionGroup> _optionGroups = const [];
+  final Set<int> _selectedOptionGroupIds = {};
   int? _categoryId;
   bool _isAvailable = true;
   String? _imagePath;
@@ -54,9 +57,16 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
   Future<void> _load() async {
     try {
       final repository = ref.read(productRepositoryProvider);
+      final optionRepository = ref.read(productOptionRepositoryProvider);
       final categories = await repository.listCategories();
       CatalogProduct? product;
       if (_editing) product = await repository.getProduct(widget.productId!);
+      final optionGroups = await optionRepository.listGroups();
+      final attached = _editing
+          ? await optionRepository.listAttachedGroupsForManagement(
+              widget.productId!,
+            )
+          : const <CatalogOptionGroup>[];
       if (!mounted) return;
       setState(() {
         _categories = categories
@@ -68,6 +78,10 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
         _categoryId =
             product?.categoryId ??
             categories.where((item) => item.isActive).firstOrNull?.id;
+        _optionGroups = optionGroups;
+        _selectedOptionGroupIds
+          ..clear()
+          ..addAll(attached.map((group) => group.id));
         if (product != null) {
           _nameController.text = product.name;
           _priceController.text = product.price.toString();
@@ -128,9 +142,16 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
       );
       final controller = ref.read(catalogControllerProvider.notifier);
       if (_editing) {
-        await controller.updateProduct(widget.productId!, draft);
+        await controller.updateProductWithOptionGroups(
+          widget.productId!,
+          draft,
+          _selectedOptionGroupIds.toList(),
+        );
       } else {
-        await controller.createProduct(draft);
+        await controller.createProductWithOptionGroups(
+          draft,
+          _selectedOptionGroupIds.toList(),
+        );
       }
       if (!mounted) return;
       context.pop();
@@ -336,6 +357,8 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
                     _buildImageSection(),
                   ],
                   const SizedBox(height: 16),
+                  _buildOptionGroupsSection(),
+                  const SizedBox(height: 16),
                   Card(
                     child: SwitchListTile(
                       key: const Key('product-available'),
@@ -412,6 +435,62 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
       _selectedImage = null;
       _imagePath = null;
     }),
+  );
+
+  Widget _buildOptionGroupsSection() => Card(
+    key: const Key('product-option-groups'),
+    child: Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Tùy chọn món',
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
+          ),
+          const SizedBox(height: 4),
+          const Text(
+            'Chọn các nhóm tùy chọn dùng cho món này.',
+            style: TextStyle(color: AppColors.secondaryInk),
+          ),
+          const SizedBox(height: 10),
+          if (_optionGroups.isEmpty)
+            const Text(
+              'Chưa có nhóm tùy chọn. Có thể lưu món mà không cần nhóm.',
+              style: TextStyle(color: AppColors.secondaryInk),
+            )
+          else
+            for (final group in _optionGroups)
+              CheckboxListTile(
+                key: Key('attach-option-group-${group.id}'),
+                contentPadding: EdgeInsets.zero,
+                controlAffinity: ListTileControlAffinity.leading,
+                value: _selectedOptionGroupIds.contains(group.id),
+                onChanged: (selected) => setState(() {
+                  if (selected == true) {
+                    _selectedOptionGroupIds.add(group.id);
+                  } else {
+                    _selectedOptionGroupIds.remove(group.id);
+                  }
+                }),
+                title: Text(
+                  group.name,
+                  style: const TextStyle(fontWeight: FontWeight.w700),
+                ),
+                subtitle: Text(
+                  group.isActive
+                      ? '${group.items.length} lựa chọn'
+                      : '${group.items.length} lựa chọn · Đã tạm ẩn',
+                  style: TextStyle(
+                    color: group.isActive
+                        ? AppColors.secondaryInk
+                        : AppColors.error,
+                  ),
+                ),
+              ),
+        ],
+      ),
+    ),
   );
 }
 
