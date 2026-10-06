@@ -6,7 +6,10 @@ import '../../app/design_system.dart';
 import '../../app/theme.dart';
 import '../../core/money.dart';
 import '../orders/order_repository.dart';
+import '../products/catalog_controller.dart';
+import '../products/product_option_repository.dart';
 import 'cart_controller.dart';
+import 'configure_item_sheet.dart';
 
 class ReviewScreen extends ConsumerWidget {
   const ReviewScreen({super.key});
@@ -336,6 +339,7 @@ class _CartLineCard extends ConsumerStatefulWidget {
 class _CartLineCardState extends ConsumerState<_CartLineCard> {
   late final TextEditingController _noteController;
   late final FocusNode _noteFocus;
+  bool _editing = false;
 
   @override
   void initState() {
@@ -398,6 +402,22 @@ class _CartLineCardState extends ConsumerState<_CartLineCard> {
                           color: AppColors.secondaryInk,
                         ),
                       ),
+                      if (line.selectedOptions.isNotEmpty)
+                        TextButton.icon(
+                          key: Key('edit-cart-line-${line.lineId}'),
+                          onPressed: snapshot.enabled && !_editing
+                              ? () => _editConfiguration(line)
+                              : null,
+                          icon: _editing
+                              ? const SizedBox.square(
+                                  dimension: 16,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                              : const Icon(Icons.tune_rounded, size: 18),
+                          label: const Text('Sửa tùy chọn'),
+                        ),
                     ],
                   ),
                 ),
@@ -410,6 +430,46 @@ class _CartLineCardState extends ConsumerState<_CartLineCard> {
                 ),
               ],
             ),
+            if (line.selectedOptions.isNotEmpty) ...[
+              const SizedBox(height: 6),
+              for (final option in line.selectedOptions)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 3),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          '+ ${option.optionName}',
+                          key: Key(
+                            'cart-option-${line.lineId}-${option.optionItemId}',
+                          ),
+                          style: const TextStyle(
+                            color: AppColors.secondaryInk,
+                            fontSize: 13,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Flexible(
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: Alignment.centerRight,
+                          child: Text(
+                            option.priceDelta == 0
+                                ? '0đ'
+                                : '+${formatVnd(option.priceDelta)}',
+                            style: const TextStyle(
+                              color: AppColors.secondaryInk,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+            ],
             const SizedBox(height: 8),
             TextField(
               key: Key('cart-note-${line.lineId}'),
@@ -474,5 +534,58 @@ class _CartLineCardState extends ConsumerState<_CartLineCard> {
         ),
       ),
     );
+  }
+
+  Future<void> _editConfiguration(CartLine line) async {
+    if (_editing) return;
+    setState(() => _editing = true);
+    try {
+      final repository = ref.read(productOptionRepositoryProvider);
+      final groups = await repository.listSelectableGroupsForSales(
+        line.productId,
+      );
+      final ids = [
+        for (final group in groups)
+          for (final option in group.items) option.id,
+      ];
+      final current = ids.isEmpty
+          ? const <ResolvedProductOption>[]
+          : await repository.resolveSelectableOptions(line.productId, ids);
+      if (!mounted) return;
+      await showConfigureItemSheet(
+        context: context,
+        productId: line.productId,
+        productName: line.productName,
+        baseUnitPrice: line.baseUnitPrice,
+        selectableOptions: current,
+        existingLine: line,
+        onSubmit: (options, note) async {
+          try {
+            final changed = ref
+                .read(cartControllerProvider.notifier)
+                .editConfiguration(
+                  line.lineId,
+                  selectedOptions: options,
+                  note: note,
+                );
+            return changed ? null : 'Không thể cập nhật món trong đơn.';
+          } on DomainValidationException {
+            return 'Giá món vượt giới hạn hỗ trợ. Hãy bỏ bớt tùy chọn.';
+          }
+        },
+      );
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Cấu hình món đã thay đổi. Hãy kiểm tra lại tùy chọn.',
+            ),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _editing = false);
+    }
   }
 }

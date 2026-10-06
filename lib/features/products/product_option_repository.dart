@@ -328,6 +328,39 @@ final class ProductOptionRepository {
     );
   }
 
+  Future<Set<int>> listProductIdsWithSelectableOptions() async {
+    final query =
+        _database.selectOnly(_database.productOptionGroups).join([
+            innerJoin(
+              _database.products,
+              _database.products.id.equalsExp(
+                _database.productOptionGroups.productId,
+              ),
+            ),
+            innerJoin(
+              _database.optionGroups,
+              _database.optionGroups.id.equalsExp(
+                _database.productOptionGroups.optionGroupId,
+              ),
+            ),
+            innerJoin(
+              _database.optionItems,
+              _database.optionItems.groupId.equalsExp(
+                _database.optionGroups.id,
+              ),
+            ),
+          ])
+          ..addColumns([_database.productOptionGroups.productId])
+          ..where(_database.products.deletedAt.isNull())
+          ..where(_database.optionGroups.isActive.equals(true))
+          ..where(_database.optionItems.isActive.equals(true))
+          ..groupBy([_database.productOptionGroups.productId]);
+    final rows = await query.get();
+    return rows
+        .map((row) => row.read(_database.productOptionGroups.productId)!)
+        .toSet();
+  }
+
   Future<List<ResolvedProductOption>> resolveSelectableOptions(
     int productId,
     List<int> optionItemIds,

@@ -87,9 +87,9 @@ final class CartLine {
   }) {
     final canonicalOptions = _canonicalOptions(selectedOptions);
     final normalizedNote = _normalizeNote(note);
-    final configuredUnitPrice = _configuredUnitPrice(
+    final configuredUnitPrice = checkedConfiguredUnitPrice(
       baseUnitPrice,
-      canonicalOptions,
+      canonicalOptions.map((option) => option.priceDelta),
     );
     checkedLineTotal(unitPrice: configuredUnitPrice, quantity: quantity);
     return CartLine._(
@@ -475,13 +475,10 @@ List<CartSelectedOption> _canonicalOptions(
   return result;
 }
 
-int _configuredUnitPrice(
-  int baseUnitPrice,
-  Iterable<CartSelectedOption> options,
-) {
+int checkedConfiguredUnitPrice(int baseUnitPrice, Iterable<int> priceDeltas) {
   var result = baseUnitPrice;
-  for (final option in options) {
-    result = checkedMoneySum(result, option.priceDelta);
+  for (final priceDelta in priceDeltas) {
+    result = checkedMoneySum(result, priceDelta);
   }
   return result;
 }
