@@ -3,6 +3,7 @@ import 'dart:typed_data';
 
 import 'package:archive/archive.dart';
 import 'package:crypto/crypto.dart';
+import 'package:dakao_in_bill/backup/backup_canonical_upgrader.dart';
 import 'package:dakao_in_bill/backup/backup_models.dart';
 import 'package:dakao_in_bill/backup/backup_validator.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -66,6 +67,113 @@ void main() {
       throwsA(isA<BackupValidationException>()),
     );
   });
+
+  test('schema 2 accepts and canonically upgrades a valid schema 1 backup', () {
+    final legacy = _validData();
+    final products = _tables(legacy)['products']! as List<Object?>;
+    (products.first! as Map<String, Object?>)['sort_order'] = 9;
+    products.addAll(<Object?>[
+      {
+        ...(products.first! as Map<String, Object?>),
+        'id': 21,
+        'name': 'Trà đá',
+        'image_path': null,
+        'sort_order': -3,
+      },
+      {
+        ...(products.first! as Map<String, Object?>),
+        'id': 22,
+        'name': 'Món ẩn',
+        'image_path': null,
+        'sort_order': -3,
+        'deleted_at': 999,
+      },
+    ]);
+
+    final result = const BackupValidator(schemaVersion: 2)
+        .validateBytes(_archive(legacy));
+    final tables = _tables(result.data);
+
+    expect(result.manifest.schemaVersion, 1);
+    expect(tables.keys.toSet(), {
+      'categories',
+      'products',
+      'option_groups',
+      'option_items',
+      'product_option_groups',
+      'orders',
+      'order_items',
+      'order_item_options',
+      'print_attempts',
+      'app_settings',
+      'printer_settings',
+    });
+    expect(tables['option_groups'], isEmpty);
+    expect(tables['option_items'], isEmpty);
+    expect(tables['product_option_groups'], isEmpty);
+    expect(tables['order_item_options'], isEmpty);
+    expect(
+      (tables['order_items']! as List<Object?>).single,
+      containsPair('base_unit_price_snapshot', 45000),
+    );
+    final upgradedProducts = tables['products']! as List<Object?>;
+    expect(upgradedProducts.map((row) => (row! as Map)['id']), [20, 21, 22]);
+    expect(upgradedProducts.map((row) => (row! as Map)['sort_order']), [
+      2,
+      0,
+      1,
+    ]);
+    expect(jsonDecode(utf8.decode(result.canonicalData)), result.data);
+  });
+
+  test('canonical upgrader does not mutate its schema 1 input', () {
+    final source = _validData();
+    final before = jsonEncode(source);
+
+    BackupCanonicalUpgrader.v1ToV2(source);
+
+    expect(jsonEncode(source), before);
+  });
+
+  test(
+    'schema 2 strictly validates its declared shape and configured price',
+    () {
+      final validV2 = BackupCanonicalUpgrader.v1ToV2(_validData());
+      expect(
+        () =>
+            const BackupValidator(schemaVersion: 2)
+                .validateBytes(_archive(validV2, schemaVersion: 2)),
+        returnsNormally,
+      );
+      expect(
+        () =>
+            const BackupValidator(schemaVersion: 1)
+                .validateBytes(_archive(validV2, schemaVersion: 2)),
+        throwsA(isA<BackupValidationException>()),
+        reason: 'the preserved V1.0 compatibility boundary rejects schema 2',
+      );
+
+      final missingTable = BackupCanonicalUpgrader.v1ToV2(_validData());
+      _tables(missingTable).remove('option_groups');
+      final missingBase = BackupCanonicalUpgrader.v1ToV2(_validData());
+      ((_tables(missingBase)['order_items']! as List<Object?>).single!
+              as Map<String, Object?>)
+          .remove('base_unit_price_snapshot');
+      final wrongPrice = BackupCanonicalUpgrader.v1ToV2(_validData());
+      ((_tables(wrongPrice)['order_items']! as List<Object?>).single!
+              as Map<String, Object?>)['base_unit_price_snapshot'] =
+          1;
+
+      for (final malformed in [missingTable, missingBase, wrongPrice]) {
+        expect(
+          () =>
+              const BackupValidator(schemaVersion: 2)
+                  .validateBytes(_archive(malformed, schemaVersion: 2)),
+          throwsA(isA<BackupValidationException>()),
+        );
+      }
+    },
+  );
 
   test('rejects a missing required table and extra table', () {
     final missing = _validData();

@@ -9,7 +9,11 @@ import '../../app/design_system.dart';
 import '../../app/theme.dart';
 import '../../core/money.dart';
 import 'catalog_controller.dart';
+import 'category_management_screen.dart';
+import 'option_management_screen.dart';
 import 'product_repository.dart';
+
+enum _ProductSection { products, categories, options }
 
 class ProductsScreen extends ConsumerStatefulWidget {
   const ProductsScreen({super.key});
@@ -20,6 +24,7 @@ class ProductsScreen extends ConsumerStatefulWidget {
 
 class _ProductsScreenState extends ConsumerState<ProductsScreen> {
   Timer? _searchDebounce;
+  _ProductSection _section = _ProductSection.products;
 
   @override
   void dispose() {
@@ -37,70 +42,137 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
   @override
   Widget build(BuildContext context) {
     final catalog = ref.watch(catalogControllerProvider);
-    return catalog.when(
-      loading: () => const AppLoadingState(label: 'Đang tải danh sách món'),
-      error: (error, stack) => AppAsyncError(
-        message: 'Không thể tải danh sách món.',
-        onRetry: () => ref.read(catalogControllerProvider.notifier).refresh(),
-      ),
-      data: (state) => Column(
-        children: [
-          Expanded(
-            child: RefreshIndicator(
-              onRefresh: ref.read(catalogControllerProvider.notifier).refresh,
-              child: CustomScrollView(
-                key: const Key('catalog-scroll'),
-                slivers: [
-                  SliverPadding(
-                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-                    sliver: SliverList.list(
-                      children: [
-                        _CatalogHeader(count: state.products.length),
-                        const SizedBox(height: 16),
-                        TextField(
-                          key: const Key('catalog-search'),
-                          onChanged: _search,
-                          textInputAction: TextInputAction.search,
-                          decoration: const InputDecoration(
-                            hintText: 'Tìm tên món…',
-                            prefixIcon: Icon(Icons.search_rounded),
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+          child: SegmentedButton<_ProductSection>(
+            key: const Key('product-sections'),
+            segments: const [
+              ButtonSegment(
+                value: _ProductSection.products,
+                label: Text('Món ăn'),
+                icon: Icon(Icons.restaurant_menu),
+              ),
+              ButtonSegment(
+                value: _ProductSection.categories,
+                label: Text('Danh mục'),
+                icon: Icon(Icons.category_outlined),
+              ),
+              ButtonSegment(
+                value: _ProductSection.options,
+                label: Text('Tùy chọn'),
+                icon: Icon(Icons.tune_rounded),
+              ),
+            ],
+            selected: {_section},
+            showSelectedIcon: false,
+            onSelectionChanged: (selection) {
+              FocusScope.of(context).unfocus();
+              setState(() => _section = selection.single);
+            },
+          ),
+        ),
+        Expanded(
+          child: Padding(
+            // The app shell's navigation bar overlays branch content. Keep
+            // management actions above its interactive area.
+            padding: const EdgeInsets.only(bottom: 72),
+            child: IndexedStack(
+              index: _section.index,
+              children: [
+                catalog.when(
+                  loading: () =>
+                      const AppLoadingState(label: 'Đang tải danh sách món'),
+                  error: (error, stack) => AppAsyncError(
+                    message: 'Không thể tải danh sách món.',
+                    onRetry: () =>
+                        ref.read(catalogControllerProvider.notifier).refresh(),
+                  ),
+                  data: (state) => Column(
+                    children: [
+                      Expanded(
+                        child: RefreshIndicator(
+                          onRefresh: ref
+                              .read(catalogControllerProvider.notifier)
+                              .refresh,
+                          child: CustomScrollView(
+                            key: const Key('catalog-scroll'),
+                            slivers: [
+                              SliverPadding(
+                                padding: const EdgeInsets.fromLTRB(
+                                  16,
+                                  12,
+                                  16,
+                                  8,
+                                ),
+                                sliver: SliverList.list(
+                                  children: [
+                                    _CatalogHeader(
+                                      count: state.products.length,
+                                    ),
+                                    const SizedBox(height: 16),
+                                    TextField(
+                                      key: const Key('catalog-search'),
+                                      onChanged: _search,
+                                      textInputAction: TextInputAction.search,
+                                      decoration: const InputDecoration(
+                                        hintText: 'Tìm tên món…',
+                                        prefixIcon: Icon(Icons.search_rounded),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 12),
+                                    _CategoryFilters(state: state),
+                                    const SizedBox(height: 12),
+                                  ],
+                                ),
+                              ),
+                              if (state.products.isEmpty)
+                                SliverFillRemaining(
+                                  hasScrollBody: false,
+                                  child: _EmptyCatalog(
+                                    filtered:
+                                        state.search.trim().isNotEmpty ||
+                                        state.categoryId != null,
+                                    onAdd: () => context.push('/products/add'),
+                                  ),
+                                )
+                              else
+                                SliverPadding(
+                                  padding: const EdgeInsets.fromLTRB(
+                                    16,
+                                    0,
+                                    16,
+                                    16,
+                                  ),
+                                  sliver: SliverList.separated(
+                                    itemCount: state.products.length,
+                                    separatorBuilder: (context, index) =>
+                                        const SizedBox(height: 12),
+                                    itemBuilder: (context, index) =>
+                                        _ProductCard(
+                                          product: state.products[index],
+                                        ),
+                                  ),
+                                ),
+                            ],
                           ),
                         ),
-                        const SizedBox(height: 12),
-                        _CategoryFilters(state: state),
-                        const SizedBox(height: 12),
-                      ],
-                    ),
+                      ),
+                      if (state.products.isNotEmpty)
+                        _AddProductAction(
+                          onPressed: () => context.push('/products/add'),
+                        ),
+                    ],
                   ),
-                  if (state.products.isEmpty)
-                    SliverFillRemaining(
-                      hasScrollBody: false,
-                      child: _EmptyCatalog(
-                        filtered:
-                            state.search.trim().isNotEmpty ||
-                            state.categoryId != null,
-                        onAdd: () => context.push('/products/add'),
-                      ),
-                    )
-                  else
-                    SliverPadding(
-                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                      sliver: SliverList.separated(
-                        itemCount: state.products.length,
-                        separatorBuilder: (context, index) =>
-                            const SizedBox(height: 12),
-                        itemBuilder: (context, index) =>
-                            _ProductCard(product: state.products[index]),
-                      ),
-                    ),
-                ],
-              ),
+                ),
+                const CategoryManagementScreen(embedded: true),
+                const OptionManagementView(),
+              ],
             ),
           ),
-          if (state.products.isNotEmpty)
-            _AddProductAction(onPressed: () => context.push('/products/add')),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
@@ -122,17 +194,10 @@ class _CatalogHeader extends StatelessWidget {
         ),
         const SizedBox(width: 8),
         OutlinedButton.icon(
-          key: const Key('manage-categories'),
-          onPressed: () async {
-            await context.push('/products/categories');
-            if (context.mounted) {
-              await ProviderScope.containerOf(context)
-                  .read(catalogControllerProvider.notifier)
-                  .refresh();
-            }
-          },
-          icon: const Icon(Icons.category_outlined, size: 20),
-          label: const Text('Danh mục'),
+          key: const Key('reorder-products'),
+          onPressed: () => context.push('/products/reorder'),
+          icon: const Icon(Icons.swap_vert_rounded, size: 20),
+          label: const Text('Sắp xếp'),
           style: OutlinedButton.styleFrom(
             minimumSize: const Size(48, 48),
             padding: const EdgeInsets.symmetric(horizontal: 12),

@@ -4,6 +4,7 @@ import 'package:dakao_in_bill/core/money.dart';
 import 'package:dakao_in_bill/data/app_database.dart';
 import 'package:dakao_in_bill/features/orders/order_repository.dart';
 import 'package:dakao_in_bill/features/products/product_repository.dart';
+import 'package:dakao_in_bill/features/products/product_option_repository.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -190,6 +191,129 @@ void main() {
     final products = await repository.listProducts();
     expect(products.map((item) => item.name), ['Một', 'Hai']);
     expect(products.map((item) => item.sortOrder), [0, 1]);
+  });
+
+  test('visible reorder preserves soft-deleted product slots', () async {
+    final first = await _createProduct(repository, name: 'Một');
+    final hidden = await _createProduct(repository, name: 'Ẩn');
+    final third = await _createProduct(repository, name: 'Ba');
+    final fourth = await _createProduct(repository, name: 'Bốn');
+    await repository.softDeleteProduct(hidden);
+
+    await repository.reorderVisibleProducts([fourth, third, first]);
+
+    expect((await repository.listProducts()).map((item) => item.name), [
+      'Bốn',
+      'Ba',
+      'Một',
+    ]);
+    expect((await repository.getProduct(hidden)).sortOrder, 1);
+    await repository.restoreProduct(hidden);
+    expect((await repository.listProducts()).map((item) => item.name), [
+      'Bốn',
+      'Ẩn',
+      'Ba',
+      'Một',
+    ]);
+  });
+
+  test('reorder requires the complete current visible product set', () async {
+    final first = await _createProduct(repository, name: 'Một');
+    await _createProduct(repository, name: 'Hai');
+
+    await expectLater(
+      repository.reorderVisibleProducts([first]),
+      throwsA(isA<DomainValidationException>()),
+    );
+    expect((await repository.listProducts()).map((item) => item.name), [
+      'Một',
+      'Hai',
+    ]);
+  });
+
+  test(
+    'manual order survives edits, filters, appends, and database reopen',
+    () async {
+      final rice = await repository.createCategory('Cơm');
+      final drinks = await repository.createCategory('Nước');
+      final first = await repository.createProduct(
+        ProductDraft(categoryId: rice, name: 'Cơm sườn', price: 45000),
+      );
+      final second = await repository.createProduct(
+        ProductDraft(categoryId: drinks, name: 'Trà đào', price: 30000),
+      );
+      final third = await repository.createProduct(
+        ProductDraft(categoryId: rice, name: 'Cơm gà', price: 40000),
+      );
+
+      await repository.reorderVisibleProducts([third, second, first]);
+      await repository.updateProduct(
+        second,
+        ProductDraft(categoryId: drinks, name: 'Trà đào lớn', price: 35000),
+      );
+      await repository.setProductAvailability(first, false);
+      final appended = await repository.createProduct(
+        ProductDraft(categoryId: rice, name: 'Cơm chả', price: 38000),
+      );
+
+      expect((await repository.listProducts()).map((item) => item.id), [
+        third,
+        second,
+        first,
+        appended,
+      ]);
+      expect(
+        (await repository.listProducts(categoryId: rice))
+            .map((item) => item.id),
+        [third, first, appended],
+      );
+      expect(
+        (await repository.listProducts(search: 'cơm')).map((item) => item.id),
+        [third, first, appended],
+      );
+
+      await database.close();
+      database = AppDatabase.openFile(databaseFile);
+      repository = ProductRepository(database, () => 1700000000200);
+      expect((await repository.listProducts()).map((item) => item.id), [
+        third,
+        second,
+        first,
+        appended,
+      ]);
+    },
+  );
+
+  test('product and option attachments save atomically', () async {
+    final categoryId = await repository.createCategory('Cơm');
+    final options = ProductOptionRepository(database, () => 1700000000000);
+    final groupId = await options.createGroup('Món thêm');
+    final productId = await repository.createProductWithOptionGroups(
+      ProductDraft(categoryId: categoryId, name: 'Cơm', price: 45000),
+      [groupId],
+    );
+    expect(
+      (await options.listAttachedGroupsForManagement(productId)).single.id,
+      groupId,
+    );
+
+    await expectLater(
+      repository.updateProductWithOptionGroups(
+        productId,
+        ProductDraft(
+          categoryId: categoryId,
+          name: 'Tên không được lưu',
+          price: 1,
+        ),
+        [999999],
+      ),
+      throwsA(isA<DomainValidationException>()),
+    );
+    expect((await repository.getProduct(productId)).name, 'Cơm');
+    expect(
+      (await options.listAttachedGroupsForManagement(productId)).single.id,
+      groupId,
+    );
   });
 
   test('product edits leave historical order snapshots unchanged', () async {

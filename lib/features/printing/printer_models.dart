@@ -59,7 +59,8 @@ final class PrintResult {
   const PrintResult.sent()
     : kind = PrintResultKind.sent,
       errorCode = null,
-      message = 'Dữ liệu đã được gửi tới máy in; hãy kiểm tra giấy.';
+      message =
+          'Dữ liệu đã được gửi qua Bluetooth. Hãy kiểm tra giấy in để xác nhận.';
 
   const PrintResult.failed(this.errorCode, this.message)
     : kind = PrintResultKind.failed;

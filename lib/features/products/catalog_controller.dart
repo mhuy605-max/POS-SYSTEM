@@ -3,10 +3,20 @@ import 'package:path_provider/path_provider.dart';
 
 import '../../data/database_provider.dart';
 import 'product_image_store.dart';
+import 'product_option_repository.dart';
 import 'product_repository.dart';
 
 final productRepositoryProvider = Provider<ProductRepository>((ref) {
   return ProductRepository(
+    ref.watch(appDatabaseProvider),
+    () => DateTime.now().millisecondsSinceEpoch,
+  );
+});
+
+final productOptionRepositoryProvider = Provider<ProductOptionRepository>((
+  ref,
+) {
+  return ProductOptionRepository(
     ref.watch(appDatabaseProvider),
     () => DateTime.now().millisecondsSinceEpoch,
   );
@@ -26,6 +36,11 @@ final catalogControllerProvider =
 final categoryControllerProvider =
     AsyncNotifierProvider<CategoryController, List<CatalogCategory>>(
       CategoryController.new,
+    );
+
+final optionManagementControllerProvider =
+    AsyncNotifierProvider<OptionManagementController, List<CatalogOptionGroup>>(
+      OptionManagementController.new,
     );
 
 final catalogRevisionProvider = NotifierProvider<CatalogRevision, int>(
@@ -80,8 +95,34 @@ final class CatalogController extends AsyncNotifier<CatalogState> {
     return id;
   }
 
+  Future<int> createProductWithOptionGroups(
+    ProductDraft draft,
+    List<int> groupIds,
+  ) async {
+    final id = await _repository.createProductWithOptionGroups(draft, groupIds);
+    _notifyCatalogChanged();
+    await refresh();
+    return id;
+  }
+
   Future<void> updateProduct(int id, ProductDraft draft) async {
     await _repository.updateProduct(id, draft);
+    _notifyCatalogChanged();
+    await refresh();
+  }
+
+  Future<void> updateProductWithOptionGroups(
+    int id,
+    ProductDraft draft,
+    List<int> groupIds,
+  ) async {
+    await _repository.updateProductWithOptionGroups(id, draft, groupIds);
+    _notifyCatalogChanged();
+    await refresh();
+  }
+
+  Future<void> reorderProducts(List<int> productIds) async {
+    await _repository.reorderVisibleProducts(productIds);
     _notifyCatalogChanged();
     await refresh();
   }
@@ -134,6 +175,69 @@ final class CatalogController extends AsyncNotifier<CatalogState> {
       search: search,
       categoryId: effectiveCategoryId,
     );
+  }
+}
+
+final class OptionManagementController
+    extends AsyncNotifier<List<CatalogOptionGroup>> {
+  ProductOptionRepository get _repository =>
+      ref.read(productOptionRepositoryProvider);
+
+  @override
+  Future<List<CatalogOptionGroup>> build() => _repository.listGroups();
+
+  Future<int> createGroup(String name) async {
+    final id = await _repository.createGroup(name);
+    await refresh();
+    return id;
+  }
+
+  Future<void> renameGroup(int id, String name) async {
+    await _repository.renameGroup(id, name);
+    await refresh();
+  }
+
+  Future<void> setGroupActive(int id, bool value) async {
+    await _repository.setGroupActive(id, value);
+    await refresh();
+  }
+
+  Future<int> createOption({
+    required int groupId,
+    required String name,
+    required int priceDelta,
+  }) async {
+    final id = await _repository.createOption(
+      groupId: groupId,
+      name: name,
+      priceDelta: priceDelta,
+    );
+    await refresh();
+    return id;
+  }
+
+  Future<void> updateOption(
+    int id, {
+    required String name,
+    required int priceDelta,
+  }) async {
+    await _repository.updateOption(id, name: name, priceDelta: priceDelta);
+    await refresh();
+  }
+
+  Future<void> setOptionActive(int id, bool value) async {
+    await _repository.setOptionActive(id, value);
+    await refresh();
+  }
+
+  Future<void> reorderOptions(int groupId, List<int> optionIds) async {
+    await _repository.reorderOptions(groupId, optionIds);
+    await refresh();
+  }
+
+  Future<void> refresh() async {
+    state = const AsyncLoading<List<CatalogOptionGroup>>();
+    state = await AsyncValue.guard(_repository.listGroups);
   }
 }
 

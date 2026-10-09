@@ -29,7 +29,7 @@ void main() {
   });
 
   test(
-    'creates deterministic versioned archive with all V1 state and image',
+    'creates deterministic format-1 schema-2 archive with all state and image',
     () async {
       final service = BackupService(
         database: database,
@@ -52,7 +52,7 @@ void main() {
       expect(first.bytes, second.bytes);
       expect(first.manifest.magic, BackupManifest.magicValue);
       expect(first.manifest.formatVersion, 1);
-      expect(first.manifest.schemaVersion, 1);
+      expect(first.manifest.schemaVersion, database.schemaVersion);
       expect(first.manifest.appVersion, '0.1.0+1');
       expect(first.manifest.createdAtUtc, '2026-10-02T06:30:00.000Z');
 
@@ -75,8 +75,12 @@ void main() {
       expect(tables.keys, <String>[
         'categories',
         'products',
+        'option_groups',
+        'option_items',
+        'product_option_groups',
         'orders',
         'order_items',
+        'order_item_options',
         'print_attempts',
         'app_settings',
         'printer_settings',
@@ -102,6 +106,14 @@ void main() {
         containsPair('receipt_settings_snapshot', contains('Quán cũ')),
       );
       expect(tables['order_items'], hasLength(3));
+      expect(tables['option_groups'], isEmpty);
+      expect(tables['option_items'], isEmpty);
+      expect(tables['product_option_groups'], isEmpty);
+      expect(tables['order_item_options'], isEmpty);
+      expect(
+        (tables['order_items']! as List<Object?>).first,
+        containsPair('base_unit_price_snapshot', 45000),
+      );
       expect(tables['print_attempts'], hasLength(2));
       expect(tables['app_settings'], hasLength(1));
       expect(tables['printer_settings'], hasLength(1));
@@ -333,6 +345,7 @@ Future<void> _insertItem(
         orderId: orderId,
         productId: Value(productId),
         productNameSnapshot: name,
+        baseUnitPriceSnapshot: Value(total),
         unitPriceSnapshot: total,
         quantity: 1,
         lineTotal: total,

@@ -1,4 +1,4 @@
-package com.example.dakao_in_bill
+package com.dakao.inbill
 
 import android.Manifest
 import android.bluetooth.BluetoothAdapter
@@ -84,10 +84,7 @@ class MainActivity : FlutterActivity() {
         }
         permissionResult = result
         requestPermissions(
-            arrayOf(
-                Manifest.permission.BLUETOOTH_CONNECT,
-                Manifest.permission.BLUETOOTH_SCAN,
-            ),
+            arrayOf(Manifest.permission.BLUETOOTH_CONNECT),
             permissionRequestCode,
         )
     }
@@ -162,7 +159,6 @@ class MainActivity : FlutterActivity() {
         val generation = start.second
         closeQuietly(existing)
         val adapter = BluetoothAdapter.getDefaultAdapter()
-        adapter.cancelDiscovery()
         val device = adapter.getRemoteDevice(address)
         val candidate = device.createRfcommSocketToServiceRecord(sppUuid)
         val registered = synchronized(socketLock) {
@@ -265,10 +261,8 @@ class MainActivity : FlutterActivity() {
 
     private fun hasBluetoothPermission(): Boolean =
         Build.VERSION.SDK_INT < Build.VERSION_CODES.S ||
-            (checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT) ==
-                PackageManager.PERMISSION_GRANTED &&
-                checkSelfPermission(Manifest.permission.BLUETOOTH_SCAN) ==
-                PackageManager.PERMISSION_GRANTED)
+            checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT) ==
+                PackageManager.PERMISSION_GRANTED
 
     private fun closeSocket() {
         val sockets = synchronized(socketLock) {

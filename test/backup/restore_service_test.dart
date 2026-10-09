@@ -6,6 +6,8 @@ import 'package:dakao_in_bill/backup/backup_validator.dart';
 import 'package:dakao_in_bill/backup/restore_service.dart';
 import 'package:dakao_in_bill/data/app_database.dart';
 import 'package:dakao_in_bill/features/products/product_image_store.dart';
+import 'package:dakao_in_bill/features/orders/order_repository.dart';
+import 'package:dakao_in_bill/features/printing/receipt_renderer.dart';
 import 'package:drift/drift.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -79,6 +81,44 @@ void main() {
       )..where((row) => row.id.equals(40))).getSingle();
       expect(order.receiptSettingsSnapshot, contains('Quán nguồn'));
       expect(item.productNameSnapshot, 'Cơm tấm cũ');
+      expect(item.baseUnitPriceSnapshot, 35000);
+      expect(item.unitPriceSnapshot, 110000);
+      final options =
+          await (live.select(live.orderItemOptions)
+                ..where((row) => row.orderItemId.equals(40))
+                ..orderBy([(row) => OrderingTerm.asc(row.displayOrder)]))
+              .get();
+      expect(options.map((row) => row.optionNameSnapshot), [
+        'Sườn thêm',
+        'Trứng thêm',
+      ]);
+      expect(options.map((row) => row.priceDeltaSnapshot), [45000, 30000]);
+      final current = await (live.select(
+        live.optionItems,
+      )..where((row) => row.id.equals(60))).getSingle();
+      expect(current.name, 'Sườn đặc biệt');
+      expect(current.priceDelta, 50000);
+      expect(current.isActive, isFalse);
+      final restoredProducts = await (live.select(
+        live.products,
+      )..orderBy([(row) => OrderingTerm.asc(row.id)])).get();
+      expect(restoredProducts.map((row) => row.sortOrder), [4, 1]);
+      final restoredGroup = await (live.select(
+        live.optionGroups,
+      )..where((row) => row.id.equals(55))).getSingle();
+      expect(restoredGroup.sortOrder, 2);
+      final restoredCatalogOptions = await (live.select(
+        live.optionItems,
+      )..orderBy([(row) => OrderingTerm.asc(row.sortOrder)])).get();
+      expect(restoredCatalogOptions.map((row) => row.sortOrder), [0, 1, 2]);
+      expect(await live.select(live.productOptionGroups).get(), hasLength(2));
+      final saved = await OrderRepository(
+        live,
+        nowEpochMillis: () => 0,
+      ).loadOrder(30);
+      final receipt = await const ReceiptRenderer().renderOrder(saved);
+      expect(receipt.widthDots, 384);
+      expect(saved.receiptSettings.footer, 'Dòng 1\nDòng 2');
     },
   );
 
@@ -317,7 +357,8 @@ Future<dynamic> _validatedSource(AppDatabase database, Directory files) async {
     nowUtc: () => DateTime.utc(2026, 10, 2),
     appVersion: '0.1.0+1',
   ).createArchive();
-  return const BackupValidator(schemaVersion: 1).validateBytes(staged.bytes);
+  return BackupValidator(schemaVersion: database.schemaVersion)
+      .validateBytes(staged.bytes);
 }
 
 Future<void> _populateSource(AppDatabase db, Directory files) async {
@@ -341,15 +382,45 @@ Future<void> _populateSource(AppDatabase db, Directory files) async {
           id: const Value(20),
           categoryId: 10,
           name: 'Cơm tấm',
-          price: 45000,
+          price: 35000,
           imagePath: const Value('product-images/menu.png'),
+          sortOrder: const Value(4),
           createdAt: 200,
           updatedAt: 200,
         ),
       );
+  await db
+      .into(db.products)
+      .insert(
+        ProductsCompanion.insert(
+          id: const Value(21),
+          categoryId: 10,
+          name: 'Cơm chả',
+          price: 40000,
+          sortOrder: const Value(1),
+          createdAt: 201,
+          updatedAt: 201,
+        ),
+      );
+  await db.customStatement(
+    'INSERT INTO option_groups '
+    '(id, name, sort_order, is_active, created_at, updated_at) '
+    "VALUES (55, 'Món thêm', 2, 1, 210, 260)",
+  );
+  await db.customStatement(
+    'INSERT INTO option_items '
+    '(id, group_id, name, price_delta, sort_order, is_active, created_at, updated_at) '
+    "VALUES (60, 55, 'Sườn đặc biệt', 50000, 0, 0, 220, 270), "
+    "(61, 55, 'Trứng thêm', 35000, 1, 1, 221, 271), "
+    "(62, 55, 'Bì thêm', 15000, 2, 1, 222, 272)",
+  );
+  await db.customStatement(
+    'INSERT INTO product_option_groups (product_id, option_group_id) '
+    'VALUES (20, 55), (21, 55)',
+  );
   const receipt =
-      '{"version":1,"shopName":"Quán nguồn","address":"A","phone":"1","footer":"F"}';
-  await _order(db, 30, 1, 'unpaid', 'UNPAID', 300, receipt);
+      '{"version":1,"shopName":"Quán nguồn","address":"A","phone":"1","footer":"Dòng 1\\nDòng 2"}';
+  await _order(db, 30, 1, 'unpaid', 'UNPAID', 300, receipt, total: 110000);
   await _order(db, 31, 2, 'paid', 'PAID', 400, receipt, paidAt: 450);
   await _order(
     db,
@@ -362,9 +433,16 @@ Future<void> _populateSource(AppDatabase db, Directory files) async {
     paidAt: 520,
     cancelledAt: 550,
   );
-  await _item(db, 40, 30);
+  await _item(db, 40, 30, base: 35000, unit: 110000);
   await _item(db, 41, 31);
   await _item(db, 42, 32);
+  await db.customStatement(
+    'INSERT INTO order_item_options '
+    '(id, order_item_id, option_item_id, group_name_snapshot, '
+    'option_name_snapshot, price_delta_snapshot, display_order) VALUES '
+    "(70, 40, 60, 'Món thêm', 'Sườn thêm', 45000, 0), "
+    "(71, 40, 61, 'Món thêm', 'Trứng thêm', 30000, 1)",
+  );
   await db
       .into(db.printAttempts)
       .insert(
@@ -414,6 +492,7 @@ Future<void> _order(
   String receipt, {
   int? paidAt,
   int? cancelledAt,
+  int total = 45000,
 }) => db
     .into(db.orders)
     .insert(
@@ -422,8 +501,8 @@ Future<void> _order(
         orderNumber: number,
         submissionToken: token,
         status: Value(status),
-        subtotal: 45000,
-        total: 45000,
+        subtotal: total,
+        total: total,
         createdAt: createdAt,
         paidAt: Value(paidAt),
         cancelledAt: Value(cancelledAt),
@@ -431,7 +510,13 @@ Future<void> _order(
       ),
     );
 
-Future<void> _item(AppDatabase db, int id, int orderId) => db
+Future<void> _item(
+  AppDatabase db,
+  int id,
+  int orderId, {
+  int base = 45000,
+  int unit = 45000,
+}) => db
     .into(db.orderItems)
     .insert(
       OrderItemsCompanion.insert(
@@ -439,9 +524,10 @@ Future<void> _item(AppDatabase db, int id, int orderId) => db
         orderId: orderId,
         productId: const Value(20),
         productNameSnapshot: 'Cơm tấm cũ',
-        unitPriceSnapshot: 45000,
+        baseUnitPriceSnapshot: Value(base),
+        unitPriceSnapshot: unit,
         quantity: 1,
-        lineTotal: 45000,
+        lineTotal: unit,
       ),
     );
 

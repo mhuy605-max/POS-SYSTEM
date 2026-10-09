@@ -39,6 +39,52 @@ class Products extends Table {
   ];
 }
 
+class OptionGroups extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  TextColumn get name => text()();
+  IntColumn get sortOrder => integer().withDefault(const Constant(0))();
+  BoolColumn get isActive => boolean().withDefault(const Constant(true))();
+  IntColumn get createdAt => integer()();
+  IntColumn get updatedAt => integer()();
+
+  @override
+  List<String> get customConstraints => <String>[
+    'CHECK (length(trim(name)) > 0)',
+  ];
+}
+
+@TableIndex(
+  name: 'option_items_group_active_order',
+  columns: {#groupId, #isActive, #sortOrder},
+)
+class OptionItems extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  IntColumn get groupId =>
+      integer().references(OptionGroups, #id, onDelete: KeyAction.restrict)();
+  TextColumn get name => text()();
+  IntColumn get priceDelta => integer()();
+  IntColumn get sortOrder => integer().withDefault(const Constant(0))();
+  BoolColumn get isActive => boolean().withDefault(const Constant(true))();
+  IntColumn get createdAt => integer()();
+  IntColumn get updatedAt => integer()();
+
+  @override
+  List<String> get customConstraints => <String>[
+    'CHECK (length(trim(name)) > 0)',
+    'CHECK (price_delta >= 0)',
+  ];
+}
+
+class ProductOptionGroups extends Table {
+  IntColumn get productId =>
+      integer().references(Products, #id, onDelete: KeyAction.restrict)();
+  IntColumn get optionGroupId =>
+      integer().references(OptionGroups, #id, onDelete: KeyAction.restrict)();
+
+  @override
+  Set<Column<Object>> get primaryKey => {productId, optionGroupId};
+}
+
 @TableIndex(name: 'orders_status_created', columns: {#status, #createdAt})
 @TableIndex(name: 'orders_paid_at', columns: {#paidAt})
 class Orders extends Table {
@@ -82,6 +128,10 @@ class OrderItems extends Table {
     onDelete: KeyAction.setNull,
   )();
   TextColumn get productNameSnapshot => text()();
+  late final IntColumn baseUnitPriceSnapshot = integer()
+      // ignore: recursive_getters
+      .check(baseUnitPriceSnapshot.isBiggerOrEqualValue(0))
+      .withDefault(const Constant(0))();
   IntColumn get unitPriceSnapshot => integer()();
   IntColumn get quantity => integer()();
   TextColumn get note => text().nullable()();
@@ -94,6 +144,33 @@ class OrderItems extends Table {
     'CHECK (quantity > 0)',
     'CHECK (line_total >= 0)',
     'CHECK (line_total = unit_price_snapshot * quantity)',
+  ];
+}
+
+@TableIndex(
+  name: 'order_item_options_order_display',
+  columns: {#orderItemId, #displayOrder},
+  unique: true,
+)
+class OrderItemOptions extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  IntColumn get orderItemId =>
+      integer().references(OrderItems, #id, onDelete: KeyAction.restrict)();
+  IntColumn get optionItemId => integer().nullable().references(
+    OptionItems,
+    #id,
+    onDelete: KeyAction.setNull,
+  )();
+  TextColumn get groupNameSnapshot => text()();
+  TextColumn get optionNameSnapshot => text()();
+  IntColumn get priceDeltaSnapshot => integer()();
+  IntColumn get displayOrder => integer()();
+
+  @override
+  List<String> get customConstraints => <String>[
+    'CHECK (length(trim(group_name_snapshot)) > 0)',
+    'CHECK (length(trim(option_name_snapshot)) > 0)',
+    'CHECK (price_delta_snapshot >= 0)',
   ];
 }
 

@@ -65,6 +65,8 @@ void main() {
       expect(saved.items.single.quantity, 2);
       expect(saved.items.single.note, 'Ít cay');
       expect(saved.items.single.lineTotal, 90000);
+      final storedItem = await database.select(database.orderItems).getSingle();
+      expect(storedItem.baseUnitPriceSnapshot, 45000);
       expect(saved.receiptSettings.version, 1);
       expect(saved.receiptSettings.shopName, 'Đakao');
       expect(saved.receiptSettings.footer, 'Cảm ơn');

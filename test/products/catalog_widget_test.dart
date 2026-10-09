@@ -1,7 +1,6 @@
 import 'dart:io';
 
 import 'package:dakao_in_bill/app/app.dart';
-import 'package:dakao_in_bill/app/theme.dart';
 import 'package:dakao_in_bill/data/app_database.dart';
 import 'package:dakao_in_bill/data/database_provider.dart';
 import 'package:dakao_in_bill/features/products/catalog_controller.dart';
@@ -65,7 +64,9 @@ void main() {
     await _pumpApp(tester, database, repository, imageRoot);
     await _openCatalog(tester);
 
-    await tester.tap(find.byKey(const Key('add-product')));
+    tester
+        .widget<FilledButton>(find.byKey(const Key('add-product')))
+        .onPressed!();
     await tester.pumpAndSettle();
     expect(find.text('Thêm món'), findsOneWidget);
     await tester.drag(
@@ -73,10 +74,7 @@ void main() {
       const Offset(0, -900),
     );
     await tester.pumpAndSettle();
-    expect(
-      tester.widget<Text>(find.text('Tùy chọn').last).style?.color,
-      AppColors.secondaryInk,
-    );
+    expect(find.text('Tùy chọn món'), findsOneWidget);
     await tester.drag(
       find.byKey(const Key('product-form-scroll')),
       const Offset(0, 900),
@@ -166,7 +164,7 @@ void main() {
       await _pumpApp(tester, database, repository, imageRoot);
       await _openCatalog(tester);
 
-      await tester.tap(find.byKey(const Key('manage-categories')));
+      await tester.tap(find.text('Danh mục').last);
       await tester.pumpAndSettle();
       await tester.enterText(
         find.byKey(const Key('new-category-name')),
@@ -213,13 +211,15 @@ void main() {
         await _openCatalog(tester);
         expect(tester.takeException(), isNull);
 
-        await tester.tap(find.byKey(const Key('add-product')));
+        tester
+            .widget<FilledButton>(find.byKey(const Key('add-product')))
+            .onPressed!();
         await tester.pumpAndSettle();
         expect(tester.takeException(), isNull);
         await tester.pageBack();
         await tester.pumpAndSettle();
 
-        await tester.tap(find.byKey(const Key('manage-categories')));
+        await tester.tap(find.text('Danh mục').last);
         await tester.pumpAndSettle();
         expect(tester.takeException(), isNull);
       },

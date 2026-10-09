@@ -67,7 +67,7 @@ The integration test creates an UNPAID order after a successful fake software se
 
 ## API 36 normal-app verification
 
-The final normal debug APK was installed on `Dakao_API_36` (`emulator-5554`) and launched with `com.example.dakao_in_bill/.MainActivity` as the focused activity. Verification used the production database and production printer channel.
+The final normal debug APK was installed on `Dakao_API_36` (`emulator-5554`) and launched with the then-temporary application ID's `.MainActivity` as the focused activity. Verification used the production database and production printer channel.
 
 Starting from empty app data, a `RevenueTest` category and a 35,000đ `RevenueItem` were created through the normal UI. The following flow passed:
 

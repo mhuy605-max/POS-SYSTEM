@@ -83,6 +83,7 @@ void main() {
               orderId: entry.$2,
               productId: const Value(20),
               productNameSnapshot: 'Cơm tấm lịch sử',
+              baseUnitPriceSnapshot: const Value(45000),
               unitPriceSnapshot: 45000,
               quantity: 1,
               lineTotal: 45000,
@@ -100,7 +101,7 @@ void main() {
       nowUtc: () => DateTime.utc(2026, 10, 2),
       appVersion: '0.1.0+1',
     ).createArchive();
-    final validated = const BackupValidator(schemaVersion: 1)
+    final validated = BackupValidator(schemaVersion: database.schemaVersion)
         .validateBytes(staged.bytes);
 
     await (database.delete(database.orderItems)).go();

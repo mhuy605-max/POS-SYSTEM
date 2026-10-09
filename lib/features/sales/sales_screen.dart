@@ -13,15 +13,31 @@ import '../printing/printer_models.dart';
 import '../products/catalog_controller.dart';
 import '../products/product_repository.dart';
 import 'cart_controller.dart';
+import 'configure_item_sheet.dart';
 
-final salesCatalogProvider = FutureProvider.autoDispose<CatalogState>((
+typedef SalesCatalogState = ({
+  CatalogState catalog,
+  Set<int> configurableProductIds,
+});
+
+final salesCatalogProvider = FutureProvider.autoDispose<SalesCatalogState>((
   ref,
 ) async {
   ref.watch(catalogRevisionProvider);
   final repository = ref.watch(productRepositoryProvider);
-  final categories = await repository.listCategories();
-  final products = await repository.listProducts();
-  return CatalogState(categories: categories, products: products);
+  final optionRepository = ref.watch(productOptionRepositoryProvider);
+  final results = await Future.wait([
+    repository.listCategories(),
+    repository.listProducts(),
+    optionRepository.listProductIdsWithSelectableOptions(),
+  ]);
+  return (
+    catalog: CatalogState(
+      categories: results[0] as List<CatalogCategory>,
+      products: results[1] as List<CatalogProduct>,
+    ),
+    configurableProductIds: results[2] as Set<int>,
+  );
 });
 
 class SalesScreen extends ConsumerStatefulWidget {
@@ -34,6 +50,66 @@ class SalesScreen extends ConsumerStatefulWidget {
 class _SalesScreenState extends ConsumerState<SalesScreen> {
   String _search = '';
   int? _categoryId;
+  int? _configuringProductId;
+
+  Future<void> _selectProduct(CatalogProduct product, bool configurable) async {
+    final cart = ref.read(cartControllerProvider.notifier);
+    if (!configurable) {
+      cart.addProduct(product);
+      return;
+    }
+    if (_configuringProductId != null) return;
+    setState(() => _configuringProductId = product.id);
+    try {
+      final repository = ref.read(productOptionRepositoryProvider);
+      final groups = await repository.listSelectableGroupsForSales(product.id);
+      final optionIds = [
+        for (final group in groups)
+          for (final option in group.items) option.id,
+      ];
+      if (!mounted || _configuringProductId != product.id) return;
+      if (optionIds.isEmpty) {
+        cart.addProduct(product);
+        return;
+      }
+      final resolved = await repository.resolveSelectableOptions(
+        product.id,
+        optionIds,
+      );
+      if (!mounted || _configuringProductId != product.id) return;
+      await showConfigureItemSheet(
+        context: context,
+        productId: product.id,
+        productName: product.name,
+        baseUnitPrice: product.price,
+        selectableOptions: resolved,
+        onSubmit: (options, note) async {
+          try {
+            final added = cart.addConfiguredProduct(
+              product,
+              selectedOptions: options,
+              note: note,
+            );
+            return added ? null : 'Không thể thêm món vào đơn.';
+          } on DomainValidationException {
+            return 'Giá món vượt giới hạn hỗ trợ. Hãy bỏ bớt tùy chọn.';
+          }
+        },
+      );
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Không thể tải tùy chọn món. Vui lòng thử lại.'),
+          ),
+        );
+      }
+    } finally {
+      if (mounted && _configuringProductId == product.id) {
+        setState(() => _configuringProductId = null);
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -48,14 +124,15 @@ class _SalesScreenState extends ConsumerState<SalesScreen> {
               onRetry: () => ref.invalidate(salesCatalogProvider),
             ),
             data: (data) {
-              final activeCategoryIds = data.categories
+              final catalog = data.catalog;
+              final activeCategoryIds = catalog.categories
                   .where((category) => category.isActive)
                   .map((category) => category.id)
                   .toSet();
               final effectiveCategoryId =
                   activeCategoryIds.contains(_categoryId) ? _categoryId : null;
               final query = _search.trim().toLowerCase();
-              final visibleProducts = data.products
+              final visibleProducts = catalog.products
                   .where(
                     (product) =>
                         activeCategoryIds.contains(product.categoryId) &&
@@ -97,7 +174,7 @@ class _SalesScreenState extends ConsumerState<SalesScreen> {
                             selected: effectiveCategoryId == null,
                             onTap: () => setState(() => _categoryId = null),
                           ),
-                          for (final category in data.categories.where(
+                          for (final category in catalog.categories.where(
                             (item) => item.isActive,
                           )) ...[
                             const SizedBox(width: 8),
@@ -139,9 +216,15 @@ class _SalesScreenState extends ConsumerState<SalesScreen> {
                         itemCount: visibleProducts.length,
                         itemBuilder: (context, index) => _SaleProductCard(
                           product: visibleProducts[index],
-                          onTap: () => ref
-                              .read(cartControllerProvider.notifier)
-                              .addProduct(visibleProducts[index]),
+                          loading:
+                              _configuringProductId ==
+                              visibleProducts[index].id,
+                          onTap: () => _selectProduct(
+                            visibleProducts[index],
+                            data.configurableProductIds.contains(
+                              visibleProducts[index].id,
+                            ),
+                          ),
                         ),
                       ),
                     ),
@@ -253,9 +336,14 @@ class _CategoryChip extends StatelessWidget {
 }
 
 class _SaleProductCard extends ConsumerWidget {
-  const _SaleProductCard({required this.product, required this.onTap});
+  const _SaleProductCard({
+    required this.product,
+    required this.onTap,
+    required this.loading,
+  });
   final CatalogProduct product;
   final VoidCallback onTap;
+  final bool loading;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -297,7 +385,12 @@ class _SaleProductCard extends ConsumerWidget {
                             ),
                           ),
                         ),
-                        if (available)
+                        if (loading)
+                          const SizedBox.square(
+                            dimension: 20,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        else if (available)
                           const Icon(Icons.add_circle, color: AppColors.primary)
                         else
                           const Text(

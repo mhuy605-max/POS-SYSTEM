@@ -1,0 +1,6 @@
+# Copy this file to android/key.properties and replace the local-only values.
+# android/key.properties and all JKS/keystore files are ignored by Git.
+storeFile=C:/Users/ACER/.android/keystores/dakao-in-bill-release.jks
+storePassword=SET_LOCALLY
+keyPassword=SET_LOCALLY
+keyAlias=dakao-in-bill

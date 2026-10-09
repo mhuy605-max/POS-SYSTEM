@@ -23,6 +23,25 @@ final class BackupDataCodec {
                   (row) => OrderingTerm.asc(row.id),
                 ]))
               .get();
+      final optionGroups =
+          await (_database.select(_database.optionGroups)
+                ..orderBy(<OrderingTerm Function($OptionGroupsTable)>[
+                  (row) => OrderingTerm.asc(row.id),
+                ]))
+              .get();
+      final optionItems =
+          await (_database.select(_database.optionItems)
+                ..orderBy(<OrderingTerm Function($OptionItemsTable)>[
+                  (row) => OrderingTerm.asc(row.id),
+                ]))
+              .get();
+      final productOptionGroups =
+          await (_database.select(_database.productOptionGroups)
+                ..orderBy(<OrderingTerm Function($ProductOptionGroupsTable)>[
+                  (row) => OrderingTerm.asc(row.productId),
+                  (row) => OrderingTerm.asc(row.optionGroupId),
+                ]))
+              .get();
       final orders =
           await (_database.select(_database.orders)
                 ..orderBy(<OrderingTerm Function($OrdersTable)>[
@@ -32,6 +51,12 @@ final class BackupDataCodec {
       final orderItems =
           await (_database.select(_database.orderItems)
                 ..orderBy(<OrderingTerm Function($OrderItemsTable)>[
+                  (row) => OrderingTerm.asc(row.id),
+                ]))
+              .get();
+      final orderItemOptions =
+          await (_database.select(_database.orderItemOptions)
+                ..orderBy(<OrderingTerm Function($OrderItemOptionsTable)>[
                   (row) => OrderingTerm.asc(row.id),
                 ]))
               .get();
@@ -83,6 +108,37 @@ final class BackupDataCodec {
                 'deleted_at': row.deletedAt,
               },
           ],
+          'option_groups': <Object>[
+            for (final row in optionGroups)
+              <String, Object>{
+                'id': row.id,
+                'name': row.name,
+                'sort_order': row.sortOrder,
+                'is_active': row.isActive,
+                'created_at': row.createdAt,
+                'updated_at': row.updatedAt,
+              },
+          ],
+          'option_items': <Object>[
+            for (final row in optionItems)
+              <String, Object>{
+                'id': row.id,
+                'group_id': row.groupId,
+                'name': row.name,
+                'price_delta': row.priceDelta,
+                'sort_order': row.sortOrder,
+                'is_active': row.isActive,
+                'created_at': row.createdAt,
+                'updated_at': row.updatedAt,
+              },
+          ],
+          'product_option_groups': <Object>[
+            for (final row in productOptionGroups)
+              <String, Object>{
+                'product_id': row.productId,
+                'option_group_id': row.optionGroupId,
+              },
+          ],
           'orders': <Object>[
             for (final row in orders)
               <String, Object?>{
@@ -109,10 +165,23 @@ final class BackupDataCodec {
                 'order_id': row.orderId,
                 'product_id': row.productId,
                 'product_name_snapshot': row.productNameSnapshot,
+                'base_unit_price_snapshot': row.baseUnitPriceSnapshot,
                 'unit_price_snapshot': row.unitPriceSnapshot,
                 'quantity': row.quantity,
                 'note': row.note,
                 'line_total': row.lineTotal,
+              },
+          ],
+          'order_item_options': <Object>[
+            for (final row in orderItemOptions)
+              <String, Object?>{
+                'id': row.id,
+                'order_item_id': row.orderItemId,
+                'option_item_id': row.optionItemId,
+                'group_name_snapshot': row.groupNameSnapshot,
+                'option_name_snapshot': row.optionNameSnapshot,
+                'price_delta_snapshot': row.priceDeltaSnapshot,
+                'display_order': row.displayOrder,
               },
           ],
           'print_attempts': <Object>[
@@ -179,8 +248,12 @@ final class BackupDataCodec {
     await _database.transaction(() async {
       for (final table in const <String>[
         'print_attempts',
+        'order_item_options',
         'order_items',
         'orders',
+        'product_option_groups',
+        'option_items',
+        'option_groups',
         'products',
         'categories',
         'app_settings',
@@ -190,7 +263,8 @@ final class BackupDataCodec {
       }
       await _database.customStatement(
         "DELETE FROM sqlite_sequence WHERE name IN ('categories', 'products', "
-        "'orders', 'order_items', 'print_attempts')",
+        "'option_groups', 'option_items', 'orders', 'order_items', "
+        "'order_item_options', 'print_attempts')",
       );
       for (final row in rows('categories')) {
         await _insert('categories', const [
@@ -217,6 +291,34 @@ final class BackupDataCodec {
           'deleted_at',
         ], row);
       }
+      for (final row in rows('option_groups')) {
+        await _insert('option_groups', const [
+          'id',
+          'name',
+          'sort_order',
+          'is_active',
+          'created_at',
+          'updated_at',
+        ], row);
+      }
+      for (final row in rows('option_items')) {
+        await _insert('option_items', const [
+          'id',
+          'group_id',
+          'name',
+          'price_delta',
+          'sort_order',
+          'is_active',
+          'created_at',
+          'updated_at',
+        ], row);
+      }
+      for (final row in rows('product_option_groups')) {
+        await _insert('product_option_groups', const [
+          'product_id',
+          'option_group_id',
+        ], row);
+      }
       for (final row in rows('orders')) {
         await _insert('orders', const [
           'id',
@@ -241,10 +343,22 @@ final class BackupDataCodec {
           'order_id',
           'product_id',
           'product_name_snapshot',
+          'base_unit_price_snapshot',
           'unit_price_snapshot',
           'quantity',
           'note',
           'line_total',
+        ], row);
+      }
+      for (final row in rows('order_item_options')) {
+        await _insert('order_item_options', const [
+          'id',
+          'order_item_id',
+          'option_item_id',
+          'group_name_snapshot',
+          'option_name_snapshot',
+          'price_delta_snapshot',
+          'display_order',
         ], row);
       }
       for (final row in rows('print_attempts')) {
